@@ -129,15 +129,6 @@ namespace asyncpp {
 			return awaiter{m_coro};
 		}
 
-		/**
-		 * \brief Release the coroutine handle from this task. You are now responsible for managing its livetime.
-		 * \return The contained coroutine handle.
-		 */
-		handle_t release() noexcept {
-			assert(m_coro);
-			return std::exchange(m_coro, {});
-		}
-
 	private:
 		handle_t m_coro;
 	};

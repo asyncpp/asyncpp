@@ -19,7 +19,7 @@ namespace asyncpp {
 			generator_promise(const generator_promise&) = delete;
 			generator_promise(generator_promise&&) = delete;
 
-			generator<T> get_return_object() noexcept;
+			coroutine_handle<generator_promise> get_return_object() noexcept { return coroutine_handle<generator_promise>::from_promise(*this); }
 			suspend_always initial_suspend() noexcept { return {}; }
 			suspend_always final_suspend() noexcept { return {}; }
 
@@ -44,10 +44,9 @@ namespace asyncpp {
 
 			// co_await is not supported in a synchronous generator
 			template<typename U>
-			std::experimental::suspend_never await_transform(U&& value) = delete;
+			suspend_never await_transform(U&& value) = delete;
 
 		private:
-			friend class generator<T>;
 			T* m_value{nullptr};
 			std::exception_ptr m_exception{nullptr};
 		};
@@ -118,6 +117,7 @@ namespace asyncpp {
 		using iterator = detail::generator_iterator<T>;
 
 		generator() noexcept : m_coro{nullptr} {}
+		generator(coroutine_handle<promise_type> coro) noexcept : m_coro{coro} {}
 		generator(generator && other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
 		generator(const generator&) = delete;
 		generator& operator=(generator&& other) noexcept {
@@ -142,20 +142,12 @@ namespace asyncpp {
 
 	private:
 		coroutine_handle<promise_type> m_coro;
-
-		friend class detail::generator_promise<T>;
-		explicit generator(coroutine_handle<promise_type> coro) noexcept : m_coro{coro} {}
 	};
-
-	template<class T>
-	inline generator<T> detail::generator_promise<T>::get_return_object() noexcept {
-		return generator<T>{coroutine_handle<generator_promise<T>>::from_promise(*this)};
-	}
 
 	/**
 	 * \brief Map the given source sequence using a function and return the result.
 	 * \param func The function to invoke on the element
-	 * \param sourc The source generator
+	 * \param source The source generator
 	 * \return Generator of mapped elements.
 	 */
 	template<typename FUNC, typename T>

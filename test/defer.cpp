@@ -4,7 +4,7 @@
 
 using namespace asyncpp;
 
-TEST(CoroutineTest, Defer) {
+TEST(ASYNCPPTest, Defer) {
 	struct test_dispatcher {
 		bool push_called = false;
 		void push(std::function<void()> fn) {
@@ -13,6 +13,6 @@ TEST(CoroutineTest, Defer) {
 		}
 	};
 	test_dispatcher d{};
-	[&]() -> fire_and_forget_task { co_await defer{d}; }().start();
+	[](test_dispatcher& d) -> fire_and_forget_task { co_await defer{d}; }(d).start();
 	ASSERT_TRUE(d.push_called);
 }
