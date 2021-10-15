@@ -10,7 +10,7 @@ namespace {
 	}
 } // namespace
 
-TEST(ASYNCPPTest, Generator) {
+TEST(ASYNCPP, Generator) {
 	for (auto e : sample_generator(100))
 		;
 }

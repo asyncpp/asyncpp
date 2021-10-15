@@ -3,7 +3,7 @@
 
 using namespace asyncpp;
 
-TEST(ASYNCPPTest, FireAndForget) {
+TEST(ASYNCPP, FireAndForget) {
 	bool executed = false;
 	[&]() -> fire_and_forget_task {
 		executed = true;

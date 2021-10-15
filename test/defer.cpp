@@ -4,7 +4,7 @@
 
 using namespace asyncpp;
 
-TEST(ASYNCPPTest, Defer) {
+TEST(ASYNCPP, Defer) {
 	struct test_dispatcher {
 		bool push_called = false;
 		void push(std::function<void()> fn) {

@@ -36,5 +36,5 @@ if(BUILD_TEST)
         target_link_libraries(asyncpp-test PRIVATE asan)
     endif()
 
-    gtest_add_tests(TARGET asyncpp-test)
+    gtest_discover_tests(asyncpp-test)
 endif()
