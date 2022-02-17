@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
 #include <type_traits>
+#include <functional>
 
 namespace asyncpp::detail {
 	template<typename T>
