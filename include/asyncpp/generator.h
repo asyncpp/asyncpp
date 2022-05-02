@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
 #include <variant>
+#include <functional>
 
 namespace asyncpp {
 	template<class T>
