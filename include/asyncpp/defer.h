@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/concepts.h>
 #include <asyncpp/detail/std_import.h>
+#include <utility>
 
 namespace asyncpp {
 	/**
@@ -38,7 +39,7 @@ namespace asyncpp {
 		 * \brief Suspend the current coroutine and schedule resumption on the specified dispatcher.
 		 * \param h The current coroutine
 		 */
-		void await_suspend(coroutine_handle<> h) const noexcept {
+		void await_suspend(coroutine_handle<> h) const noexcept(noexcept(target_dispatcher->push(std::declval<std::function<void()>>()))) {
 			target_dispatcher->push([h]() mutable { h.resume(); });
 		}
 		/// \brief Called on resumption

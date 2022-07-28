@@ -2,6 +2,9 @@
 #include <functional>
 
 namespace asyncpp {
+    /**
+     * \brief Basic dispatcher interface class
+     */
 	class dispatcher {
 	public:
 		virtual ~dispatcher();

@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
 #include <variant>
+#include <cassert>
 
 namespace asyncpp {
 	template<class T>
@@ -66,7 +67,6 @@ namespace asyncpp {
 	/**
 	 * \brief Generic task type
 	 * \tparam T Return type of the task
-	 * \note You should always mark functions returning task<> as [[nodiscard]] to avoid not co_awaiting them.
 	 */
 	template<class T = void>
 	class [[nodiscard]] task {

@@ -8,15 +8,15 @@
 namespace asyncpp {
 	namespace detail {
 		/**
-	 * \brief Fire and Forget coroutine task.
-	 * 
-	 * Allows to "spin of" an async task from a sync method or to start another thread of execution from within a async method.
-	 * This task does not return any value and can not be awaited. It might finish right away (Eager && no await) or outlive the calling method.
-	 * An example use case is medius_handler which starts a new task for every message received.
-	 * \note Since the coroutine might outlive its caller, care must be taken if pointers or references are passed.
-	 * \note If it is used as the return value of a lambda this applies to captures by value as well.
-	 * \tparam Eager Flag to indicate if execution should start immediately or only after calling start.
-	 */
+		* \brief Fire and Forget coroutine task.
+		* 
+		* Allows to "spin of" an async task from a sync method or to start another thread of execution from within a async method.
+		* This task does not return any value and can not be awaited. It might finish right away (Eager && no await) or outlive the calling method.
+		* An example use case is medius_handler which starts a new task for every message received.
+		* \note Since the coroutine might outlive its caller, care must be taken if pointers or references are passed.
+		* \note If it is used as the return value of a lambda this applies to captures by value as well.
+		* \tparam Eager Flag to indicate if execution should start immediately or only after calling start.
+		*/
 		template<bool Eager = false>
 		struct fire_and_forget_task_impl {
 			// Promise type of this task

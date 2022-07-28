@@ -3,8 +3,7 @@ This is a base c++ library providing polyfills and basic task/generator types fo
 
 Tested and supported compilers:
 * Clang 12
-
-**WARNING**: Neither this library nor compiler support for coroutines is what I would consider production ready. I do use it in some services where uptime is not important and have not found any significant issues, but you should probably make sure you have solid testing and don't value reliability too much.
+* Clang 14
 
 ### Provided classes
 * `defer` Allows defering the current coroutine to a different dispatcher

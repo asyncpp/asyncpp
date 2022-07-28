@@ -1,4 +1,8 @@
 #pragma once
+/**
+ * \file std_import.h
+ * \brief Provides a consistent import interface for coroutine, experimental/coroutine or a best effort fallback definition.
+ */
 
 #if __has_include(<coroutine>) && __cpp_impl_coroutine
 // This is perfect

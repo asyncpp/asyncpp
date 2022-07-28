@@ -31,6 +31,7 @@ if(BUILD_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/defer.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/fire_and_forget.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/generator.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/ptr_tag.cpp
     )
     target_link_libraries(asyncpp-test PRIVATE asyncpp GTest::GTest GTest::Main Threads::Threads)
 
