@@ -1,6 +1,10 @@
 # Async++ library
 This is a base c++ library providing polyfills and basic task/generator types for the c++20 coroutines.
 
+Also checkout the async wrappers for other libraries:
+* [asyncpp-curl](https://github.com/Thalhammer/asyncpp-curl)
+* [asyncpp-grpc](https://github.com/Thalhammer/asyncpp-grpc)
+
 Tested and supported compilers:
 * Clang 12
 * Clang 14
