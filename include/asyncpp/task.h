@@ -1,15 +1,16 @@
 #pragma once
+#include <asyncpp/detail/promise_allocator_base.h>
 #include <asyncpp/detail/std_import.h>
-#include <variant>
 #include <cassert>
+#include <variant>
 
 namespace asyncpp {
-	template<class T>
+	template<class T, detail::ByteAllocator Allocator>
 	class task;
 
 	namespace detail {
-		template<class TVal, class TPromise>
-		class task_promise_base {
+		template<class TVal, ByteAllocator Allocator, class TPromise>
+		class task_promise_base : public promise_allocator_base<Allocator> {
 		public:
 			task_promise_base() noexcept {}
 			~task_promise_base() {}
@@ -45,8 +46,8 @@ namespace asyncpp {
 			std::variant<std::monostate, TVal, std::exception_ptr> m_value;
 		};
 
-		template<class T>
-		class task_promise : public task_promise_base<T, task_promise<T>> {
+		template<class T, ByteAllocator Allocator>
+		class task_promise : public task_promise_base<T, Allocator, task_promise<T, Allocator>> {
 		public:
 			template<class U>
 			void return_value(U&& value) requires(std::is_convertible_v<U, T>) {
@@ -56,10 +57,10 @@ namespace asyncpp {
 		};
 
 		struct returned {};
-		template<>
-		class task_promise<void> : public task_promise_base<returned, task_promise<void>> {
+		template<ByteAllocator Allocator>
+		class task_promise<void, Allocator> : public task_promise_base<returned, Allocator, task_promise<void, Allocator>> {
 		public:
-			void return_void() { m_value.template emplace<returned>(); }
+			void return_void() { this->m_value.template emplace<returned>(); }
 			void get() { this->rethrow_if_exception(); }
 		};
 	} // namespace detail
@@ -68,11 +69,11 @@ namespace asyncpp {
 	 * \brief Generic task type
 	 * \tparam T Return type of the task
 	 */
-	template<class T = void>
+	template<class T = void, detail::ByteAllocator Allocator = std::allocator<std::byte>>
 	class [[nodiscard]] task {
 	public:
 		/// \brief Promise type
-		using promise_type = detail::task_promise<T>;
+		using promise_type = detail::task_promise<T, Allocator>;
 		/// \brief Handle type
 		using handle_t = coroutine_handle<promise_type>;
 
@@ -86,7 +87,7 @@ namespace asyncpp {
 		task(std::nullptr_t) noexcept : m_coro{} {}
 
 		/// \brief Move constructor
-		task(task && other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
+		task(task&& other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
 		/// \brief Move assignment
 		task& operator=(task&& other) noexcept {
 			m_coro = std::exchange(other.m_coro, m_coro);

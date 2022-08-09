@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/concepts.h>
 #include <asyncpp/detail/std_import.h>
+#include <asyncpp/detail/promise_allocator_base.h>
 #include <asyncpp/policy.h>
 #include <atomic>
 #include <utility>
@@ -17,10 +18,10 @@ namespace asyncpp {
 		* \note If it is used as the return value of a lambda this applies to captures by value as well.
 		* \tparam Eager Flag to indicate if execution should start immediately or only after calling start.
 		*/
-		template<bool Eager = false>
+		template<bool Eager = false, class Allocator = std::allocator<std::byte>>
 		struct fire_and_forget_task_impl {
 			// Promise type of this task
-			class promise_type {
+			class promise_type : public promise_allocator_base<Allocator> {
 				std::atomic<size_t> m_ref_count{1};
 				std::function<void()> m_exception_handler{};
 
@@ -116,7 +117,9 @@ namespace asyncpp {
 	} // namespace detail
 
 	/// \brief Eager task, that immediately starts execution once called.
-	using eager_fire_and_forget_task = detail::fire_and_forget_task_impl<true>;
+	template<class Allocator = std::allocator<std::byte>>
+	using eager_fire_and_forget_task = detail::fire_and_forget_task_impl<true, Allocator>;
 	/// \brief Lazy task, that only starts after calling start().
-	using fire_and_forget_task = detail::fire_and_forget_task_impl<false>;
+	template<class Allocator = std::allocator<std::byte>>
+	using fire_and_forget_task = detail::fire_and_forget_task_impl<false, Allocator>;
 } // namespace asyncpp

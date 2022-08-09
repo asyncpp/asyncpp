@@ -58,4 +58,10 @@ namespace asyncpp::detail {
 		using type = typename await_return_type_impl<is_awaiter<T>, T>::type;
 	};
 
+	template<class Allocator>
+	concept ByteAllocator = requires(Allocator&& a) {
+		{ std::allocator_traits<Allocator>::allocate(a, 0) } -> std::convertible_to<std::byte*>;
+		{std::allocator_traits<Allocator>::deallocate(a, nullptr, 0)};
+	};
+
 } // namespace asyncpp::detail

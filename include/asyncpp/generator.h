@@ -1,15 +1,16 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
+#include <asyncpp/detail/promise_allocator_base.h>
 #include <variant>
 #include <functional>
 
 namespace asyncpp {
-	template<class T>
+	template<class T, detail::ByteAllocator Allocator = std::allocator<std::byte>>
 	class generator;
 
 	namespace detail {
-		template<class T>
-		class generator_promise {
+		template<class T, ByteAllocator Allocator>
+		class generator_promise : public promise_allocator_base<Allocator> {
 		public:
 			using value_type = std::remove_reference_t<T>;
 			using reference_type = std::conditional_t<std::is_reference_v<T>, T, T&>;
@@ -54,10 +55,10 @@ namespace asyncpp {
 
 		struct generator_end {};
 
-		template<class T>
+		template<class T, ByteAllocator Allocator>
 		class generator_iterator {
 		public:
-			using promise_type = generator_promise<T>;
+			using promise_type = generator_promise<T, Allocator>;
 			using handle_t = coroutine_handle<promise_type>;
 			using iterator_category = std::input_iterator_tag;
 			using difference_type = std::ptrdiff_t;
@@ -90,18 +91,18 @@ namespace asyncpp {
 			handle_t m_coro;
 		};
 
-		template<typename T>
-		inline bool operator!=(const generator_iterator<T>& it, generator_end s) noexcept {
+		template<typename T, ByteAllocator Allocator>
+		inline bool operator!=(const generator_iterator<T, Allocator>& it, generator_end s) noexcept {
 			return !(it == s);
 		}
 
-		template<typename T>
-		inline bool operator==(generator_end s, const generator_iterator<T>& it) noexcept {
+		template<typename T, ByteAllocator Allocator>
+		inline bool operator==(generator_end s, const generator_iterator<T, Allocator>& it) noexcept {
 			return it == s;
 		}
 
-		template<typename T>
-		inline bool operator!=(generator_end s, const generator_iterator<T>& it) noexcept {
+		template<typename T, ByteAllocator Allocator>
+		inline bool operator!=(generator_end s, const generator_iterator<T, Allocator>& it) noexcept {
 			return it != s;
 		}
 	} // namespace detail
@@ -109,13 +110,13 @@ namespace asyncpp {
 	/**
 	 * \brief Generator coroutine class
 	 */
-	template<typename T>
+	template<typename T, detail::ByteAllocator Allocator>
 	class [[nodiscard]] generator {
 	public:
 		/// \brief The promise type
-		using promise_type = detail::generator_promise<T>;
+		using promise_type = detail::generator_promise<T, Allocator>;
 		/// \brief The iterator type
-		using iterator = detail::generator_iterator<T>;
+		using iterator = detail::generator_iterator<T, Allocator>;
 
 		generator() noexcept : m_coro{nullptr} {}
 		generator(coroutine_handle<promise_type> coro) noexcept : m_coro{coro} {}
@@ -139,7 +140,7 @@ namespace asyncpp {
 			}
 			return iterator{m_coro};
 		}
-		detail::generator_end end() const noexcept { return {}; }
+		constexpr detail::generator_end end() const noexcept { return {}; }
 
 	private:
 		coroutine_handle<promise_type> m_coro;

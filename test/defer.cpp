@@ -13,6 +13,6 @@ TEST(ASYNCPP, Defer) {
 		}
 	};
 	test_dispatcher d{};
-	[](test_dispatcher& d) -> fire_and_forget_task { co_await defer{d}; }(d).start();
+	[](test_dispatcher& d) -> fire_and_forget_task<> { co_await defer{d}; }(d).start();
 	ASSERT_TRUE(d.push_called);
 }
