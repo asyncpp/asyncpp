@@ -25,5 +25,7 @@ TEST(ASYNCPP, GeneratorAllocator) {
 	for (auto e : sample_generator_alloc(100, alloc))
 		;
 	ASSERT_EQ(alloc.allocated_sum, alloc.released_sum);
+	ASSERT_EQ(alloc.allocated_count, alloc.released_count);
 	ASSERT_NE(0, alloc.released_sum);
+	ASSERT_NE(0, alloc.released_count);
 }

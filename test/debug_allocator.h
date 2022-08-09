@@ -5,13 +5,17 @@
 struct debug_allocator {
 	using value_type = std::byte;
 	size_t allocated_sum{0};
+	size_t allocated_count{0};
 	size_t released_sum{0};
+	size_t released_count{0};
 	std::byte* allocate(size_t n) {
 		allocated_sum += n;
+		allocated_count++;
 		return ::new std::byte[n];
 	}
 	void deallocate(std::byte* ptr, size_t n) {
 		released_sum += n;
+		released_count++;
 		::delete[] ptr;
 	}
 };

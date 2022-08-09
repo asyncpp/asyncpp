@@ -24,7 +24,9 @@ TEST(ASYNCPP, TaskAllocator) {
 	}({alloc})).get();
 	ASSERT_EQ(x, 100);
 	ASSERT_EQ(alloc.allocated_sum, alloc.released_sum);
+	ASSERT_EQ(alloc.allocated_count, alloc.released_count);
 	ASSERT_NE(0, alloc.released_sum);
+	ASSERT_NE(0, alloc.released_count);
 }
 
 TEST(ASYNCPP, TaskAllocatorDefault) {
