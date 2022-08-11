@@ -24,13 +24,13 @@ namespace asyncpp {
 			suspend_always initial_suspend() { return {}; }
 			auto final_suspend() noexcept {
 				struct awaiter {
-					bool await_ready() noexcept { return false; }
+					constexpr bool await_ready() noexcept { return false; }
 					auto await_suspend(coroutine_handle<TPromise> h) noexcept {
 						assert(h);
 						assert(h.promise().m_continuation);
 						return h.promise().m_continuation;
 					}
-					void await_resume() noexcept {}
+					constexpr void await_resume() noexcept {}
 				};
 				return awaiter{};
 			}
@@ -110,8 +110,8 @@ namespace asyncpp {
 		/// \brief Operator co_await
 		auto operator co_await() noexcept {
 			struct awaiter {
-				explicit awaiter(handle_t coro) : m_coro(coro) {}
-				bool await_ready() noexcept { return false; }
+				constexpr explicit awaiter(handle_t coro) : m_coro(coro) {}
+				constexpr bool await_ready() noexcept { return false; }
 				auto await_suspend(coroutine_handle<void> h) noexcept {
 					assert(m_coro);
 					assert(h);
