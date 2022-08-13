@@ -75,7 +75,7 @@ namespace asyncpp {
 		 * \brief Wait for all active tasks to finish
 		 * \return auto Awaiter that pauses the current coroutine until all spawned task have finished.
 		 */
-		[[nodiscard]] auto join() noexcept {
+		[[nodiscard]] auto join() {
 			if (m_continuation) throw std::logic_error("async_launch_scope was already awaited");
 			struct awaiter {
 				async_launch_scope* m_scope;
