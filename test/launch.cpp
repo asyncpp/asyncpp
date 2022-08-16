@@ -52,6 +52,4 @@ TEST(ASYNCPP, AsyncLaunchScope) {
 	ASSERT_TRUE(spawn_did_return);
 	ASSERT_TRUE(join_did_return);
 	ASSERT_FALSE(d.invoke_all());
-
-	ASSERT_THROW(scope.launch([]() -> task<void> { co_return; }()), std::logic_error);
 }

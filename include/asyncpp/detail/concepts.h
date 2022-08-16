@@ -28,12 +28,6 @@ namespace asyncpp::detail {
 		{a.await_resume()};
 	};
 
-	/** \brief Check if T implements the dispatcher interface */
-	template<typename T>
-	concept is_dispatcher = requires(T&& a) {
-		{a.push(std::declval<std::function<void()>>)};
-	};
-
 	/** 
 	 * \brief Get the return type of an awaitable type, resolving operator co_await overloads.
 	 * \note This is a best effort attempt. It will not be correct in all cases, for example it does not handle std::coroutine_traits.
@@ -58,10 +52,19 @@ namespace asyncpp::detail {
 		using type = typename await_return_type_impl<is_awaiter<T>, T>::type;
 	};
 
+} // namespace asyncpp::detail
+
+namespace asyncpp {
+	/** \brief Check if T implements the dispatcher interface */
+	template<typename T>
+	concept Dispatcher = requires(T&& a) {
+		{a.push(std::declval<std::function<void()>>)};
+	};
+
+	/** \brief Check if a type is a valid allocator providing std::byte allocations. */
 	template<class Allocator>
 	concept ByteAllocator = requires(Allocator&& a) {
 		{ std::allocator_traits<Allocator>::allocate(a, 0) } -> std::convertible_to<std::byte*>;
-		{std::allocator_traits<Allocator>::deallocate(a, nullptr, 0)};
+		{std::allocator_traits<Allocator>::deallocate(a, std::declval<std::byte*>(), 0)};
 	};
-
-} // namespace asyncpp::detail
+} // namespace asyncpp

@@ -34,5 +34,5 @@ TEST(ASYNCPP, TaskAllocatorDefault) {
 		co_return 100;
 	}()).get();
 	ASSERT_EQ(x, 100);
-	static_assert(std::is_same_v<task<int>::promise_type::allocator_type, std::allocator<std::byte>>, "Default allocator is not std::allocator");
+	static_assert(std::is_same_v<task<int>::promise_type::allocator_type, default_allocator_type>, "Default allocator is not std::allocator");
 }

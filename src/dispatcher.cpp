@@ -10,7 +10,5 @@ namespace asyncpp {
      */
 	thread_local dispatcher* g_this_dispatcher = nullptr;
 
-	dispatcher::~dispatcher() {}
-
 	dispatcher* dispatcher::current() noexcept { return g_this_dispatcher; }
 } // namespace asyncpp

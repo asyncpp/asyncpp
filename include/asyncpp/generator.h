@@ -5,7 +5,7 @@
 #include <functional>
 
 namespace asyncpp {
-	template<class T, detail::ByteAllocator Allocator = std::allocator<std::byte>>
+	template<class T, ByteAllocator Allocator = default_allocator_type>
 	class generator;
 
 	namespace detail {
@@ -110,7 +110,7 @@ namespace asyncpp {
 	/**
 	 * \brief Generator coroutine class
 	 */
-	template<typename T, detail::ByteAllocator Allocator>
+	template<typename T, ByteAllocator Allocator>
 	class [[nodiscard]] generator {
 	public:
 		/// \brief The promise type

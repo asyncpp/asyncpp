@@ -12,8 +12,8 @@ namespace asyncpp {
 	 * It can be used if a function needs to run within a certain thread (e.g. libuv I/O) or to give a different task
 	 * the chance to get work done. Does nothing if the dispatcher is nullptr.
 	 */
-	template<typename TDispatcher>
-	requires detail::is_dispatcher<TDispatcher> struct defer {
+	template<Dispatcher TDispatcher>
+	struct defer {
 		/// \brief The new dispatcher to resume execution on.
 		TDispatcher* target_dispatcher;
 

@@ -4,6 +4,14 @@
 #include <asyncpp/detail/std_import.h>
 #include <type_traits>
 
+namespace asyncpp {
+#ifndef ASYNCPP_DEFAULT_ALLOCATOR
+	using default_allocator_type = std::allocator<std::byte>;
+#else
+	using default_allocator_type = ASYNCPP_DEFAULT_ALLOCATOR;
+#endif
+}
+
 namespace asyncpp::detail {
 	template<ByteAllocator Allocator>
 	class promise_allocator_base {
@@ -18,7 +26,8 @@ namespace asyncpp::detail {
 			} else {
 				static_assert(sizeof...(Args) > 0, "using a statefull allocator but no allocator passed");
 				allocator_type alloc = parameter_pack::get_last(args...);
-				static_assert(std::is_convertible_v<std::remove_cvref_t<decltype(alloc)>&, allocator_type> || std::is_constructible_v<allocator_type, decltype(alloc)>,
+				static_assert(std::is_convertible_v<std::remove_cvref_t<decltype(alloc)>&, allocator_type> ||
+								  std::is_constructible_v<allocator_type, decltype(alloc)>,
 							  "last argument is not of allocator type");
 				auto ptr = std::allocator_traits<allocator_type>::allocate(alloc, size + sizeof(allocator_type));
 				auto x = new (ptr) allocator_type{std::move(alloc)};

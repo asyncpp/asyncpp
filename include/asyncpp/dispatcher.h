@@ -6,8 +6,9 @@ namespace asyncpp {
      * \brief Basic dispatcher interface class
      */
 	class dispatcher {
-	public:
-		virtual ~dispatcher();
+	protected:
+        ~dispatcher() = default;
+    public:
 		/**
          * Push a function to be executed on the dispatcher.
          * 

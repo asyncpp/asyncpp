@@ -5,7 +5,7 @@
 #include <variant>
 
 namespace asyncpp {
-	template<class T, detail::ByteAllocator Allocator>
+	template<class T, ByteAllocator Allocator>
 	class task;
 
 	namespace detail {
@@ -69,7 +69,7 @@ namespace asyncpp {
 	 * \brief Generic task type
 	 * \tparam T Return type of the task
 	 */
-	template<class T = void, detail::ByteAllocator Allocator = std::allocator<std::byte>>
+	template<class T = void, ByteAllocator Allocator = default_allocator_type>
 	class [[nodiscard]] task {
 	public:
 		/// \brief Promise type

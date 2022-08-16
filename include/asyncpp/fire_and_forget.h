@@ -18,7 +18,7 @@ namespace asyncpp {
 		* \note If it is used as the return value of a lambda this applies to captures by value as well.
 		* \tparam Eager Flag to indicate if execution should start immediately or only after calling start.
 		*/
-		template<bool Eager = false, class Allocator = std::allocator<std::byte>>
+		template<bool Eager = false, ByteAllocator Allocator = default_allocator_type>
 		struct fire_and_forget_task_impl {
 			// Promise type of this task
 			class promise_type : public promise_allocator_base<Allocator> {
@@ -117,9 +117,9 @@ namespace asyncpp {
 	} // namespace detail
 
 	/// \brief Eager task, that immediately starts execution once called.
-	template<class Allocator = std::allocator<std::byte>>
+	template<class Allocator = default_allocator_type>
 	using eager_fire_and_forget_task = detail::fire_and_forget_task_impl<true, Allocator>;
 	/// \brief Lazy task, that only starts after calling start().
-	template<class Allocator = std::allocator<std::byte>>
+	template<class Allocator = default_allocator_type>
 	using fire_and_forget_task = detail::fire_and_forget_task_impl<false, Allocator>;
 } // namespace asyncpp
