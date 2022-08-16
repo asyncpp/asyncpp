@@ -14,26 +14,26 @@ Tested and supported compilers:
 
 The provided tools include:
 * Coroutine Types:
-  * `fire_and_forget_task`
-  * `eager_fire_and_forget_task`
-  * `generator<T>`
-  * `task<T>`
+  * [`fire_and_forget_task`](#fire_and_forget_task)
+  * [`eager_fire_and_forget_task`](#eager_fire_and_forget_task)
+  * [`generator<T>`](#generatort)
+  * [`task<T>`](#taskt)
 * Awaitable Types:
-  * `defer`
-  * `promise<T>`
+  * [`defer`](#defer)
+  * [`promise<T>`](#promiset)
 * Functions:
-  * `launch()`
-  * `as_promise()`
+  * [`launch()`](#launch)
+  * [`as_promise()`](#as_promise)
 * Concepts:
-  * `Dispatcher`
-  * `ByteAllocator`
+  * [`Dispatcher`](#dispatcher-concept)
+  * [`ByteAllocator`](#byteallocator-concept)
 * Utilities:
-  * `dispatcher`
-  * `async_launch_scope`
-  * Pointer tagging
-  * Reference counting
-  * `scope_guard`
-  * `threadsafe_queue<T>`
+  * [`dispatcher`](#dispatcher)
+  * [`async_launch_scope`](#async_launch_scope)
+  * [Pointer tagging](#pointer-tagging)
+  * [Reference counting](#reference-counting)
+  * [`scope_guard`](#scope_guard)
+  * [`threadsafe_queue<T>`](#threadsafe_queuet)
 
 ## `fire_and_forget_task`
 A coroutine task with void return type that can not be awaited. It can be used as an
