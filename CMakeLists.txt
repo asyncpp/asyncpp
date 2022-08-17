@@ -6,14 +6,12 @@ find_package(Threads REQUIRED)
 option(BUILD_TEST "Enable test builds" ON)
 option(WITH_ASAN "Enable asan for test builds" ON)
 
-add_library(asyncpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/dispatcher.cpp
-)
-target_link_libraries(asyncpp PRIVATE Threads::Threads)
+add_library(asyncpp INTERFACE)
+target_link_libraries(asyncpp INTERFACE Threads::Threads)
 target_include_directories(asyncpp
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_compile_features(asyncpp PUBLIC cxx_std_20)
+target_compile_features(asyncpp INTERFACE cxx_std_20)
 
 if(BUILD_TEST)
     enable_testing()
