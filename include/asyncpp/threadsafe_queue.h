@@ -1,7 +1,9 @@
 #pragma once
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <utility>
 
 namespace asyncpp {
 	/**

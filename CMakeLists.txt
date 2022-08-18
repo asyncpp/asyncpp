@@ -35,6 +35,7 @@ if(BUILD_TEST)
         ${CMAKE_CURRENT_SOURCE_DIR}/test/ref.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/scope_guard.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test/task.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/thread_pool.cpp
     )
     target_link_libraries(asyncpp-test PRIVATE asyncpp GTest::GTest GTest::Main Threads::Threads)
 
