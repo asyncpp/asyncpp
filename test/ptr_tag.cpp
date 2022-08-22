@@ -8,11 +8,8 @@ namespace {
 		size_t x;
 	};
 
-	enum class tag {
-		test0,
-		test1
-	};
-}
+	enum class tag { test0, test1 };
+} // namespace
 
 TEST(ASYNCPP, PtrTag) {
 	test t;

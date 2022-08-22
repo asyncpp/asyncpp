@@ -153,7 +153,7 @@ namespace asyncpp {
 					}
 					{
 						std::unique_lock lck{mutex};
-						cv.wait(lck);
+						cv.wait_for(lck, std::chrono::milliseconds{100});
 					}
 				}
 				std::unique_lock lck{mutex};

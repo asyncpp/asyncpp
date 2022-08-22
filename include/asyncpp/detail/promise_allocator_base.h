@@ -10,7 +10,7 @@ namespace asyncpp {
 #else
 	using default_allocator_type = ASYNCPP_DEFAULT_ALLOCATOR;
 #endif
-}
+} // namespace asyncpp
 
 namespace asyncpp::detail {
 	template<ByteAllocator Allocator>

@@ -13,9 +13,9 @@ namespace asyncpp {
 	std::future<T> as_promise(Awaitable&& t) requires(!std::is_void_v<T>) {
 		std::promise<T> p;
 		auto res = p.get_future();
-		[](Awaitable t, std::promise<T> p) -> eager_fire_and_forget_task<> {
+		[](std::decay_t<Awaitable> t, std::promise<T> p) -> eager_fire_and_forget_task<> {
 			try {
-				p.set_value(co_await t);
+				p.set_value(co_await std::move(t));
 			} catch (...) { p.set_exception(std::current_exception()); }
 		}(std::move(t), std::move(p));
 		return res;
@@ -31,9 +31,9 @@ namespace asyncpp {
 	std::future<void> as_promise(Awaitable&& t) requires(std::is_void_v<T>) {
 		std::promise<void> p;
 		auto res = p.get_future();
-		[](Awaitable t, std::promise<void> p) -> eager_fire_and_forget_task<> {
+		[](std::decay_t<Awaitable> t, std::promise<void> p) -> eager_fire_and_forget_task<> {
 			try {
-				co_await t;
+				co_await std::move(t);
 				p.set_value();
 			} catch (...) { p.set_exception(std::current_exception()); }
 		}(std::move(t), std::move(p));

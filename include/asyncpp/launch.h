@@ -93,7 +93,7 @@ namespace asyncpp {
 				}
 				bool await_suspend(coroutine_handle<> hdl) {
 					std::unique_lock lck{m_scope->m_mtx};
-					if(m_scope->m_continuation) throw std::logic_error("duplicate join");
+					if (m_scope->m_continuation) throw std::logic_error("duplicate join");
 					m_scope->m_continuation = hdl;
 					return m_scope->m_count != 0;
 				}

@@ -1,6 +1,6 @@
+#include "debug_allocator.h"
 #include <asyncpp/generator.h>
 #include <gtest/gtest.h>
-#include "debug_allocator.h"
 
 using namespace asyncpp;
 

@@ -1,0 +1,43 @@
+name: CMake CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+    paths:
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "include/**"
+      - "test/**"
+      - ".github/actions/**"
+      - ".github/workflows/cmake.yml"
+
+env:
+  CXX: /usr/bin/clang++-12
+  CC: /usr/bin/clang-12
+
+jobs:
+  min-req:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install cmake
+        run: |
+          wget https://cmake.org/files/v3.12/cmake-3.12.4.tar.gz
+          tar -zxf cmake-3.12.4.tar.gz
+          cd cmake-3.12.4
+          ./bootstrap
+          make -j $(nproc)
+          sudo make install
+      - uses: ./.github/actions/install/gtest
+      - name: Build Tests
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DASYNCPP_BUILD_TEST=ON -G 'Unix Makefiles'
+          cmake --build .
+      - name: Run Tests
+        run: |
+          cd build
+          ./asyncpp-test

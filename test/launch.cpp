@@ -24,7 +24,7 @@ TEST(ASYNCPP, AsyncLaunchScope) {
 	scope.launch([](test_dispatcher& d, async_launch_scope& scope, bool& spawn_did_execute, bool& spawn_did_return) -> task<void> {
 		co_await defer{d};
 		spawn_did_execute = true;
-		
+
 		scope.launch([](test_dispatcher& d, async_launch_scope& scope, bool& spawn_did_return) -> task<void> {
 			co_await defer{d};
 			spawn_did_return = true;
