@@ -12,6 +12,13 @@ target_include_directories(asyncpp
                            INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(asyncpp INTERFACE cxx_std_20)
 
+# G++ below 11 needs a flag
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11.0")
+    target_compile_options(asyncpp INTERFACE -fcoroutines)
+  endif()
+endif()
+
 if(ASYNCPP_BUILD_TEST)
   enable_testing()
   include(GoogleTest)
