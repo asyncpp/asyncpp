@@ -12,7 +12,7 @@ target_include_directories(asyncpp
                            INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(asyncpp INTERFACE cxx_std_20)
 
-if(BUILD_TEST)
+if(ASYNCPP_BUILD_TEST)
   enable_testing()
   include(GoogleTest)
   if(HUNTER_ENABLED)
@@ -39,7 +39,7 @@ if(BUILD_TEST)
   target_link_libraries(asyncpp-test PRIVATE asyncpp GTest::GTest GTest::Main
                                              Threads::Threads)
 
-  if(WITH_ASAN)
+  if(ASYNCPP_WITH_ASAN)
     message(STATUS "Building with asan enabled")
     target_compile_options(asyncpp-test PRIVATE -fsanitize=address)
     target_link_libraries(asyncpp-test PRIVATE asan)
