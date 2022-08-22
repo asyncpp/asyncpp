@@ -1,0 +1,45 @@
+name: Lint CI
+
+on:
+  push:
+#    branches: [master]
+#  pull_request:
+#    branches: [master]
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-20.04
+    steps:
+      - run: |
+          sudo apt-get install clang-format
+          shopt -s globstar
+      - uses: actions/checkout@v2
+      - run: find \( -name "*.h" -or -name "*.cpp" \) -exec clang-format -i {} \;
+      - run: find \( -name "*.h" -or -name "*.cpp" \) -exec ./.github/scripts/add-newline-if-missing.sh {} \;
+      - uses: ./.github/actions/process-linting-results
+        with:
+          linter_name: clang-format
+
+  cmake-format:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - run: |
+          pip install cmakelang
+          shopt -s globstar
+      - uses: actions/checkout@v2
+      - run: find \( -name "CMakeLists.txt" -or -name "*.cmake" \) -exec cmake-format -i {} \;
+      - uses: ./.github/actions/process-linting-results
+        with:
+          linter_name: cmake-format
+
+  line-ending:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: git add --renormalize .
+      - uses: ./.github/actions/process-linting-results
+        with:
+          linter_name: line-ending

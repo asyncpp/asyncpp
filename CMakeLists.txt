@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.13)
 project(Asyncpp)
 find_package(Threads REQUIRED)
 
-option(BUILD_TEST "Enable test builds" ON)
-option(WITH_ASAN "Enable asan for test builds" ON)
+option(ASYNCPP_BUILD_TEST "Enable test builds" ON)
+option(ASYNCPP_WITH_ASAN "Enable asan for test builds" ON)
 
 add_library(asyncpp INTERFACE)
 target_link_libraries(asyncpp INTERFACE Threads::Threads)
