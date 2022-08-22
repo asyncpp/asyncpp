@@ -8,6 +8,7 @@ namespace asyncpp {
      */
 	class dispatcher {
 		static thread_local inline dispatcher* g_current_dispatcher = nullptr;
+
 	protected:
 		~dispatcher() = default;
 
@@ -20,8 +21,7 @@ namespace asyncpp {
 		 * \throws std::logic_error if this thread is already assigned to a different dispatcher and the supplied pointer is not null.
 		 */
 		static void current(dispatcher* d) {
-			if(g_current_dispatcher && d && g_current_dispatcher != d)
-				throw std::logic_error("thread dispatcher already set");
+			if (g_current_dispatcher && d && g_current_dispatcher != d) throw std::logic_error("thread dispatcher already set");
 			g_current_dispatcher = d;
 		}
 
@@ -39,8 +39,6 @@ namespace asyncpp {
          * Returns the current dispatcher, or nullptr if the current thread is
          * not associated with a dispatcher.
          */
-		static dispatcher* current() noexcept {
-			return g_current_dispatcher;
-		}
+		static dispatcher* current() noexcept { return g_current_dispatcher; }
 	};
 } // namespace asyncpp

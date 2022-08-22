@@ -87,7 +87,7 @@ namespace asyncpp {
 		task(std::nullptr_t) noexcept : m_coro{} {}
 
 		/// \brief Move constructor
-		task(task&& other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
+		task(task && other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
 		/// \brief Move assignment
 		task& operator=(task&& other) noexcept {
 			m_coro = std::exchange(other.m_coro, m_coro);

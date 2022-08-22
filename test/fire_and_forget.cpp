@@ -8,7 +8,8 @@ TEST(ASYNCPP, FireAndForget) {
 	[&]() -> fire_and_forget_task<> {
 		executed = true;
 		co_return;
-	}().start();
+	}()
+				 .start();
 	ASSERT_TRUE(executed);
 	executed = false;
 	[&]() -> eager_fire_and_forget_task<> {

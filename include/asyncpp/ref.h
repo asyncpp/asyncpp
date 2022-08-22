@@ -13,9 +13,12 @@ namespace asyncpp {
 	template<typename T>
 	concept RefCount = requires() {
 		{T{std::declval<size_t>()}};
-		{ std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
-		{ std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
-		{ std::declval<const T&>().count() } -> std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_increment() }
+		->std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_decrement() }
+		->std::convertible_to<size_t>;
+		{ std::declval<const T&>().count() }
+		->std::convertible_to<size_t>;
 	};
 
 	/**
@@ -77,7 +80,7 @@ namespace asyncpp {
 		 * \brief Get the current use_count of this object
 		 * \return size_t The reference count
 		 */
-        size_t use_count() const noexcept { return m_refcount.count(); }
+		size_t use_count() const noexcept { return m_refcount.count(); }
 
 	public:
 		intrusive_refcount() = default;
@@ -90,9 +93,9 @@ namespace asyncpp {
 	 */
 	template<IntrusiveRefCount T>
 	inline void refcounted_add_ref(const T* ptr) {
-        assert(ptr);
-        ptr->m_refcount.fetch_increment();
-    }
+		assert(ptr);
+		ptr->m_refcount.fetch_increment();
+	}
 
 	/**
 	 * \brief refcounted_remove_ref specialization for intrusive_refcount
@@ -101,18 +104,18 @@ namespace asyncpp {
 	 */
 	template<IntrusiveRefCount T>
 	inline void refcounted_remove_ref(const T* ptr) {
-        assert(ptr);
-        auto cnt = ptr->m_refcount.fetch_decrement();
-        if(cnt == 1) delete ptr;
-    }
+		assert(ptr);
+		auto cnt = ptr->m_refcount.fetch_decrement();
+		if (cnt == 1) delete ptr;
+	}
 
 	/**
 	 * \brief Concept checking if a type is viable for usage with ref<> (i.e. it provides overloads for refcounted_add_ref and refcounted_remove_ref)
 	 */
 	template<typename T>
 	concept RefCountable = requires(T* a) {
-		{ refcounted_add_ref(a) };
-		{ refcounted_remove_ref(a) };
+		{refcounted_add_ref(a)};
+		{refcounted_remove_ref(a)};
 	};
 
 	/**
@@ -134,10 +137,8 @@ namespace asyncpp {
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Copy constructor
-		ref(const ref& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>())))
-			: m_ptr{other.m_ptr}
-		{
-			if(m_ptr) refcounted_add_ref(m_ptr);
+		ref(const ref& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>()))) : m_ptr{other.m_ptr} {
+			if (m_ptr) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Assignment operator
 		ref& operator=(const ref& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
@@ -150,26 +151,18 @@ namespace asyncpp {
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
 		void reset(T* ptr = nullptr, bool adopt_ref = false) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
-			if(m_ptr) refcounted_remove_ref(m_ptr);
+			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = ptr;
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Destructor
-		~ref() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
-			reset();
-		}
+		~ref() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) { reset(); }
 		/// \brief Dereference this handle
-		T* operator->() const noexcept {
-			return m_ptr;
-		}
+		T* operator->() const noexcept { return m_ptr; }
 		/// \brief Dereference this handle
-		T& operator*() const noexcept {
-			return *m_ptr;
-		}
+		T& operator*() const noexcept { return *m_ptr; }
 		/// \brief Get the contained value
-		T* get() const noexcept {
-			return m_ptr;
-		}
+		T* get() const noexcept { return m_ptr; }
 		/// \brief Release the contained pointer
 		T* release() noexcept {
 			auto ptr = m_ptr;

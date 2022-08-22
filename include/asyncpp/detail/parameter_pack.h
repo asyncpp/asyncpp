@@ -14,6 +14,7 @@ namespace asyncpp::detail {
 		}
 
 		parameter_pack() = delete;
+
 	public:
 		template<size_t Index, typename... Args>
 		static constexpr decltype(auto) get_at_index(Args&&... args) noexcept {
@@ -28,4 +29,4 @@ namespace asyncpp::detail {
 		}
 	};
 
-} // namespace asyncpp
+} // namespace asyncpp::detail

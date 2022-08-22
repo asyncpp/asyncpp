@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include <asyncpp/ref.h>
+#include <gtest/gtest.h>
 
 using namespace asyncpp;
 
@@ -9,7 +9,7 @@ namespace {
 		~test() noexcept { did_destroy = true; }
 		using intrusive_refcount<>::use_count;
 	};
-}
+} // namespace
 
 TEST(ASYNCPP, RefCounted) {
 	did_destroy = false;

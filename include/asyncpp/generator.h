@@ -1,8 +1,8 @@
 #pragma once
-#include <asyncpp/detail/std_import.h>
 #include <asyncpp/detail/promise_allocator_base.h>
-#include <variant>
+#include <asyncpp/detail/std_import.h>
 #include <functional>
+#include <variant>
 
 namespace asyncpp {
 	template<class T, ByteAllocator Allocator = default_allocator_type>
