@@ -1,4 +1,8 @@
 # Async++ library
+
+[![License Badge](https://img.shields.io/github/license/Thalhammer/asyncpp)](https://github.com/Thalhammer/asyncpp/blob/master/LICENSE)
+[![Stars Badge](https://img.shields.io/github/stars/Thalhammer/asyncpp)](https://github.com/Thalhammer/asyncpp/stargazers)
+
 Async++ is a c++ library providing polyfills and a large set of general purpose utilities
 for making use of c++20 coroutines. It aims to provide modern and easy to use interfaces 
 without sacrificing performance. While it is primarily tested and developed on modern linux,
