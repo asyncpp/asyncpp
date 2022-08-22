@@ -10,6 +10,7 @@ jobs:
   ubuntu2204:
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         compiler:
           - { tag: "clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12" }
