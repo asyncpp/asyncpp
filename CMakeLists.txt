@@ -21,7 +21,7 @@ if(ASYNCPP_BUILD_TEST)
     add_library(GTest::GTest ALIAS GTest::gtest)
     add_library(GTest::Main ALIAS GTest::gtest_main)
   else()
-    find_package(GTest CONFIG REQUIRED)
+    find_package(GTest REQUIRED)
   endif()
 
   add_executable(
