@@ -54,12 +54,17 @@ namespace asyncpp {
 	template<RefCount TCounter = thread_safe_refcount>
 	class intrusive_refcount;
 
+	namespace detail {
+		template<typename T>
+		inline void is_intrusive_refcount(const intrusive_refcount<T>&);
+	}
+
 	/**
 	 * \brief Concept to check if a class inherits from intrusive_refcount
 	 */
 	template<typename T>
 	concept IntrusiveRefCount = requires(T& a) {
-		[]<typename TCounter>(intrusive_refcount<TCounter>&) {}(a);
+		{detail::is_intrusive_refcount(a)};
 	};
 
 	/**

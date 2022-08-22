@@ -69,20 +69,20 @@ namespace std::experimental {
 
 			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr explicit operator bool() const noexcept { return __handle_; }
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void operator()() { resume(); }
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void operator()() const { resume(); }
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void resume() {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void resume() const {
 				assert(__is_suspended());
 				assert(!done());
 				__builtin_coro_resume(__handle_);
 			}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void destroy() {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void destroy() const {
 				assert(__is_suspended());
 				__builtin_coro_destroy(__handle_);
 			}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool done() const {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool done() const noexcept {
 				assert(__is_suspended());
 				return __builtin_coro_done(__handle_);
 			}
