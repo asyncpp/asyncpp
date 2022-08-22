@@ -27,7 +27,15 @@ jobs:
       CXX: ${{ matrix.compiler.cxx }}
       CC: ${{ matrix.compiler.cc }}
     outputs:
-      ${{ matrix.compiler.runs-on }}-${{ matrix.compiler.tag }}: ${{ steps.test.outputs.status }}
+      ubuntu-22.04-clang-12: ${{ steps.test.outputs.ubuntu-22.04-clang-12 }}
+      ubuntu-22.04-clang-13: ${{ steps.test.outputs.ubuntu-22.04-clang-13 }}
+      ubuntu-22.04-clang-14: ${{ steps.test.outputs.ubuntu-22.04-clang-14 }}
+      ubuntu-22.04-g++-10: ${{ steps.test.outputs.ubuntu-22.04-g++-10 }}
+      ubuntu-22.04-g++-11: ${{ steps.test.outputs.ubuntu-22.04-g++-11 }}
+      ubuntu-20.04-clang-12: ${{ steps.test.outputs.ubuntu-20.04-clang-12 }}
+      ubuntu-20.04-clang-11: ${{ steps.test.outputs.ubuntu-20.04-clang-11 }}
+      ubuntu-20.04-clang-10: ${{ steps.test.outputs.ubuntu-20.04-clang-10 }}
+      ubuntu-20.04-g++-10: ${{ steps.test.outputs.ubuntu-20.04-g++-10 }}
     steps:
       - uses: actions/checkout@v2
       - uses: lukka/get-cmake@latest
@@ -37,10 +45,10 @@ jobs:
       - name: Build
         run: cmake --build .
       - name: Test
-        id: test
-        run: |
-          ./asyncpp-test
-          echo "::set-output name=status::${{ job.status }}"
+        run: ./asyncpp-test
+      - name: Update Result
+        if: ${{ always() }}
+        run: echo "::set-output name=${{ matrix.compiler.runs-on }}-${{ matrix.compiler.tag }}::${{ job.status }}"
 
       - if: github.event_name == 'push' && always()
         uses: ./.github/actions/badge
