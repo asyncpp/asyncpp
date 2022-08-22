@@ -5,7 +5,7 @@ inputs:
     description: The subfolder where to group the badges
     required: true
   label:
-    description: The label to you in the badge (this should be unqie for each badge in a category)
+    description: The label to you in the badge (this should be unique for each badge in a category)
     required: true
   message:
     description: The message you wish to have in the badge
