@@ -15,12 +15,12 @@ jobs:
           - { tag: "ubuntu-2004_clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2004_clang-13", name: "Clang 13", cxx: "/usr/bin/clang++-13", cc: "/usr/bin/clang-13", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2004_clang-14", name: "Clang 14", cxx: "/usr/bin/clang++-14", cc: "/usr/bin/clang-14", runs-on: "ubuntu-22.04" }
-          - { tag: "ubuntu-2204_g++-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-22.04" }
-          - { tag: "ubuntu-2204_g++-11", name: "G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_gcc-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_gcc-11", name: "G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2204_clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-20.04" }
           - { tag: "ubuntu-2204_clang-11", name: "Clang 11", cxx: "/usr/bin/clang++-11", cc: "/usr/bin/clang-11", runs-on: "ubuntu-20.04" }
           - { tag: "ubuntu-2204_clang-10", name: "Clang 10", cxx: "/usr/bin/clang++-10", cc: "/usr/bin/clang-10", runs-on: "ubuntu-20.04" }
-          - { tag: "ubuntu-2204_g++-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
+          - { tag: "ubuntu-2204_gcc-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
     runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
     env:
@@ -30,12 +30,12 @@ jobs:
       ubuntu-2204_clang-12: ${{ steps.test.outputs.ubuntu-2204_clang-12 }}
       ubuntu-2204_clang-13: ${{ steps.test.outputs.ubuntu-2204_clang-13 }}
       ubuntu-2204_clang-14: ${{ steps.test.outputs.ubuntu-2204_clang-14 }}
-      ubuntu-2204_g++-10: ${{ steps.test.outputs.ubuntu-2204_g++-10 }}
-      ubuntu-2204_g++-11: ${{ steps.test.outputs.ubuntu-2204_g++-11 }}
+      ubuntu-2204_gcc-10: ${{ steps.test.outputs.ubuntu-2204_gcc-10 }}
+      ubuntu-2204_gcc-11: ${{ steps.test.outputs.ubuntu-2204_gcc-11 }}
       ubuntu-2004_clang-12: ${{ steps.test.outputs.ubuntu-2004_clang-12 }}
       ubuntu-2004_clang-11: ${{ steps.test.outputs.ubuntu-2004_clang-11 }}
       ubuntu-2004_clang-10: ${{ steps.test.outputs.ubuntu-2004_clang-10 }}
-      ubuntu-2004_g++-10: ${{ steps.test.outputs.ubuntu-2004_g++-10 }}
+      ubuntu-2004_gcc-10: ${{ steps.test.outputs.ubuntu-2004_gcc-10 }}
     steps:
       - uses: actions/checkout@v2
       - uses: lukka/get-cmake@latest
