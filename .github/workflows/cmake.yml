@@ -13,6 +13,10 @@ on:
 #      - ".github/actions/**"
 #      - ".github/workflows/cmake.yml"
 
+env:
+  CXX: /usr/bin/clang++-12
+  CC: /usr/bin/clang-12
+
 jobs:
   min-req:
     runs-on: ubuntu-latest
@@ -31,8 +35,8 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DASYNCPP_BUILD_TEST=ON
-          cmake --build .
+          cmake .. -DASYNCPP_BUILD_TEST=ON -G 'Unix Makefiles'
+          make
       - name: test
         run: |
           cd build
