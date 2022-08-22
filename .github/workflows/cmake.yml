@@ -36,8 +36,12 @@ jobs:
           mkdir build
           cd build
           cmake .. -DASYNCPP_BUILD_TEST=ON -G 'Unix Makefiles'
+          tree
           make
+          tree
       - name: test
         run: |
+          tree
           cd build
+          tree
           ./asyncpp-test
