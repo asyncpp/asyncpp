@@ -7,21 +7,27 @@ on:
     branches: [master]
 
 jobs:
-  ubuntu2204:
-    runs-on: ubuntu-22.04
+  build:
     strategy:
       fail-fast: false
       matrix:
         compiler:
-          - { tag: "clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12" }
-          - { tag: "clang-13", name: "Clang 13", cxx: "/usr/bin/clang++-13", cc: "/usr/bin/clang-13" }
-          - { tag: "clang-14", name: "Clang 14", cxx: "/usr/bin/clang++-14", cc: "/usr/bin/clang-14" }
-          - { tag: "g++-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10" }
-          - { tag: "g++-11", name: "G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11" }
+          - { tag: "clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-22.04" }
+          - { tag: "clang-13", name: "Clang 13", cxx: "/usr/bin/clang++-13", cc: "/usr/bin/clang-13", runs-on: "ubuntu-22.04" }
+          - { tag: "clang-14", name: "Clang 14", cxx: "/usr/bin/clang++-14", cc: "/usr/bin/clang-14", runs-on: "ubuntu-22.04" }
+          - { tag: "g++-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-22.04" }
+          - { tag: "g++-11", name: "G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
+          - { tag: "clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-20.04" }
+          - { tag: "clang-11", name: "Clang 11", cxx: "/usr/bin/clang++-11", cc: "/usr/bin/clang-11", runs-on: "ubuntu-20.04" }
+          - { tag: "clang-10", name: "Clang 10", cxx: "/usr/bin/clang++-10", cc: "/usr/bin/clang-10", runs-on: "ubuntu-20.04" }
+          - { tag: "g++-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
+    runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
     env:
       CXX: ${{ matrix.compiler.cxx }}
       CC: ${{ matrix.compiler.cc }}
+    outputs:
+      ${{ matrix.compiler.runs-on }}-${{ matrix.compiler.tag }}: ${{ steps.test.outputs.status }}
     steps:
       - uses: actions/checkout@v2
       - uses: lukka/get-cmake@latest
@@ -31,51 +37,24 @@ jobs:
       - name: Build
         run: cmake --build .
       - name: Test
-        run: ./asyncpp-test
+        id: test
+        run: |
+          ./asyncpp-test
+          echo "::set-output name=status::${{ job.status }}"
 
       - if: github.event_name == 'push' && always()
         uses: ./.github/actions/badge
         with:
-          category: ubuntu2204
-          label: ${{ matrix.compiler.tag }}
-  
-  ubuntu2004:
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler:
-          - { tag: "clang-12", name: "Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12" }
-          - { tag: "clang-11", name: "Clang 11", cxx: "/usr/bin/clang++-11", cc: "/usr/bin/clang-11" }
-          - { tag: "clang-10", name: "Clang 10", cxx: "/usr/bin/clang++-10", cc: "/usr/bin/clang-10" }
-          - { tag: "g++-10", name: "G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10" }
-    name: Compiler ${{ matrix.compiler.name }}
-    env:
-      CXX: ${{ matrix.compiler.cxx }}
-      CC: ${{ matrix.compiler.cc }}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: lukka/get-cmake@latest
-      - uses: ./.github/actions/install/gtest
-      - name: Configure
-        run: cmake . -DASYNCPP_BUILD_TEST=ON -G 'Unix Makefiles'
-      - name: Build
-        run: cmake --build .
-      - name: Test
-        run: ./asyncpp-test
-
-      - if: github.event_name == 'push' && always()
-        uses: ./.github/actions/badge
-        with:
-          category: ubuntu2004
+          category: ${{ matrix.compiler.runs-on }}
           label: ${{ matrix.compiler.tag }}
 
   badge-upload:
     if: ${{ always() }}
-    needs: [ubuntu2004, ubuntu2204]
+    needs: [build]
     runs-on: ubuntu-20.04
+    name: Publish badges
     steps:
       - name: Information passed
-        env: { CONTENT: "${{ toJSON(needs) }}" }
+        env: { CONTENT: "${{ toJSON(needs.build.outputs) }}" }
         run: "echo $CONTENT"
     
