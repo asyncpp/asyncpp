@@ -27,15 +27,15 @@ jobs:
       CXX: ${{ matrix.compiler.cxx }}
       CC: ${{ matrix.compiler.cc }}
     outputs:
-      ubuntu-2204_clang-12: ${{ steps.test.outputs.ubuntu-2204_clang-12 }}
-      ubuntu-2204_clang-13: ${{ steps.test.outputs.ubuntu-2204_clang-13 }}
-      ubuntu-2204_clang-14: ${{ steps.test.outputs.ubuntu-2204_clang-14 }}
-      ubuntu-2204_gcc-10: ${{ steps.test.outputs.ubuntu-2204_gcc-10 }}
-      ubuntu-2204_gcc-11: ${{ steps.test.outputs.ubuntu-2204_gcc-11 }}
-      ubuntu-2004_clang-12: ${{ steps.test.outputs.ubuntu-2004_clang-12 }}
-      ubuntu-2004_clang-11: ${{ steps.test.outputs.ubuntu-2004_clang-11 }}
-      ubuntu-2004_clang-10: ${{ steps.test.outputs.ubuntu-2004_clang-10 }}
-      ubuntu-2004_gcc-10: ${{ steps.test.outputs.ubuntu-2004_gcc-10 }}
+      ubuntu-2204_clang-12: ${{ steps.status.outputs.ubuntu-2204_clang-12 }}
+      ubuntu-2204_clang-13: ${{ steps.status.outputs.ubuntu-2204_clang-13 }}
+      ubuntu-2204_clang-14: ${{ steps.status.outputs.ubuntu-2204_clang-14 }}
+      ubuntu-2204_gcc-10: ${{ steps.status.outputs.ubuntu-2204_gcc-10 }}
+      ubuntu-2204_gcc-11: ${{ steps.status.outputs.ubuntu-2204_gcc-11 }}
+      ubuntu-2004_clang-12: ${{ steps.status.outputs.ubuntu-2004_clang-12 }}
+      ubuntu-2004_clang-11: ${{ steps.status.outputs.ubuntu-2004_clang-11 }}
+      ubuntu-2004_clang-10: ${{ steps.status.outputs.ubuntu-2004_clang-10 }}
+      ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
     steps:
       - uses: actions/checkout@v2
       - uses: lukka/get-cmake@latest
@@ -47,6 +47,7 @@ jobs:
       - name: Test
         run: ./asyncpp-test
       - name: Update Result
+        id: status
         if: ${{ always() }}
         run: echo "::set-output name=${{ matrix.compiler.tag }}::${{ job.status }}"
 
