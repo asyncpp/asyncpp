@@ -2,16 +2,16 @@ name: CMake CI
 
 on:
   push:
-#    branches: [master]
-#  pull_request:
-#    branches: [master]
-#    paths:
-#      - "CMakeLists.txt"
-#      - "cmake/**"
-#      - "include/**"
-#      - "test/**"
-#      - ".github/actions/**"
-#      - ".github/workflows/cmake.yml"
+    branches: [master]
+  pull_request:
+    branches: [master]
+    paths:
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "include/**"
+      - "test/**"
+      - ".github/actions/**"
+      - ".github/workflows/cmake.yml"
 
 env:
   CXX: /usr/bin/clang++-12
