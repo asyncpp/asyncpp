@@ -38,9 +38,12 @@ jobs:
       ubuntu-2004_clang-10: ${{ steps.status.outputs.ubuntu-2004_clang-10 }}
       ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: lukka/get-cmake@latest
-      - uses: ./.github/actions/install/gtest
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+      - name: Install GTest
+        uses: ./.github/actions/install/gtest
       - name: Configure
         run: cmake . -DASYNCPP_BUILD_TEST=ON -G 'Unix Makefiles'
       - name: Build
@@ -60,9 +63,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Publish Badges
+      - if: github.event_name == 'push' && always()
+        name: Publish Badges
         uses: ./.github/actions/badge
         with:
           category: compiler
-          badges: ${{ needs.build.outputs }}
+          badges: ${{ toJSON(needs.build.outputs) }}
     
