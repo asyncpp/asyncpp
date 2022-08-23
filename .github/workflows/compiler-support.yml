@@ -60,8 +60,7 @@ jobs:
       - name: Information passed
         env: { CONTENT: "${{ toJSON(needs.build.outputs) }}" }
         run: "echo $CONTENT"
-      - if: github.event_name == 'push' && always()
-        uses: ./.github/actions/badge
+      - uses: ./.github/actions/badge
         with:
           category: compiler
           badges: ${{ needs.build.outputs }}
