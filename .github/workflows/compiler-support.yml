@@ -63,8 +63,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - if: github.event_name == 'push' && always()
-        name: Publish Badges
+      - name: Publish Badges
         uses: ./.github/actions/badge
         with:
           category: compiler
