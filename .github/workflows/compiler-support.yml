@@ -56,16 +56,13 @@ jobs:
         run: echo "::set-output name=${{ matrix.compiler.tag }}::${{ job.status }}"
 
   badge-upload:
-    if: ${{ always() }}
+    if:  ${{ github.event_name == 'push' && always() }}
     needs: [build]
     runs-on: ubuntu-20.04
     name: Publish badges
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: machine echo env
-        env : { CONTENT : "${{ toJson(needs.build.outputs) }}" }
-        run : "echo $CONTENT"
       - name: Publish Badges
         uses: ./.github/actions/badge
         with:
