@@ -15,7 +15,7 @@ runs:
   using: composite
   steps:
     - run: |
-        nodejs ./.github/actions/badge/write-json-object.js ${{ inputs.category }} '${{ inputs.badges }}'
+        node ./.github/actions/badge/write-json-object.js ${{ inputs.category }} '${{ inputs.badges }}'
       shell: bash
     - uses: peaceiris/actions-gh-pages@v3
       with:
