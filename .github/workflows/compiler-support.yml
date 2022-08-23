@@ -27,6 +27,7 @@ jobs:
       CXX: ${{ matrix.compiler.cxx }}
       CC: ${{ matrix.compiler.cc }}
     outputs:
+      # Because github wants us to suffer we need to list out every output instead of using a matrix statement or some kind of dynamic setting
       ubuntu-2204_clang-12: ${{ steps.status.outputs.ubuntu-2204_clang-12 }}
       ubuntu-2204_clang-13: ${{ steps.status.outputs.ubuntu-2204_clang-13 }}
       ubuntu-2204_clang-14: ${{ steps.status.outputs.ubuntu-2204_clang-14 }}
@@ -57,10 +58,10 @@ jobs:
     runs-on: ubuntu-20.04
     name: Publish badges
     steps:
-      - name: Information passed
-        env: { CONTENT: "${{ toJSON(needs.build.outputs) }}" }
-        run: "echo $CONTENT"
-      - uses: ./.github/actions/badge
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Publish Badges
+        uses: ./.github/actions/badge
         with:
           category: compiler
           badges: ${{ needs.build.outputs }}
