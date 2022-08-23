@@ -51,12 +51,6 @@ jobs:
         if: ${{ always() }}
         run: echo "::set-output name=${{ matrix.compiler.tag }}::${{ job.status }}"
 
-      - if: github.event_name == 'push' && always()
-        uses: ./.github/actions/badge
-        with:
-          category: compiler
-          label: ${{ matrix.compiler.tag }}
-
   badge-upload:
     if: ${{ always() }}
     needs: [build]
@@ -66,4 +60,9 @@ jobs:
       - name: Information passed
         env: { CONTENT: "${{ toJSON(needs.build.outputs) }}" }
         run: "echo $CONTENT"
+      - if: github.event_name == 'push' && always()
+        uses: ./.github/actions/badge
+        with:
+          category: compiler
+          badges: ${{ needs.build.outputs }}
     
