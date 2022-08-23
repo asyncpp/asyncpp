@@ -60,6 +60,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-20.04
     name: Publish badges
+    env: { CONTENT : "${{ toJson(needs.build.outputs) }}" }
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -67,5 +68,5 @@ jobs:
         uses: ./.github/actions/badge
         with:
           category: compiler
-          badges: ${{ toJSON(needs.build.outputs) }}
+          badges: ${{ env.CONTENT }}
     
