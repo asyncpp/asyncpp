@@ -3,7 +3,6 @@
 #include <asyncpp/scope_guard.h>
 #include <atomic>
 #include <cassert>
-#include <mutex>
 #include <stdexcept>
 #include <utility>
 
@@ -46,15 +45,14 @@ namespace asyncpp {
 	 * \brief Holder class for spawning child tasks. Allows waiting for all of them to finish.
 	 */
 	class async_launch_scope {
-		std::mutex m_mtx{};
-		size_t m_count{0u};
-		coroutine_handle<> m_continuation{};
+		std::atomic<size_t> m_count{0u};
+		std::atomic<void*> m_continuation{};
 
 	public:
 		constexpr async_launch_scope() noexcept = default;
 		async_launch_scope(const async_launch_scope&) = delete;
 		async_launch_scope& operator=(const async_launch_scope&) = delete;
-		~async_launch_scope() { assert(m_count == 0); }
+		~async_launch_scope() { assert(m_count.load() == 0); }
 
 		/**
 		 * \brief Spawn a new task for the given awaitable.
@@ -64,45 +62,52 @@ namespace asyncpp {
 		template<typename Awaitable, ByteAllocator Allocator = default_allocator_type>
 		void launch(Awaitable&& awaitable, const Allocator& allocator = {}) {
 			[](async_launch_scope* scope, std::decay_t<Awaitable> awaitable, const Allocator&) -> detail::launch_task<Allocator> {
-				{
-					std::unique_lock lck{scope->m_mtx};
-					scope->m_count++;
-				}
+				scope->m_count.fetch_add(1);
 				scope_guard guard{[scope]() noexcept {
-					std::unique_lock lck{scope->m_mtx};
-					scope->m_count--;
-					if (scope->m_count == 0) {
-						auto hdl = scope->m_continuation;
-						lck.unlock();
-						if (hdl) hdl.resume();
+					// If this is the last task
+					if (scope->m_count.fetch_sub(1) == 1) {
+						// And we are being awaited
+						auto hdl = scope->m_continuation.exchange(nullptr);
+						// Resume the awaiter
+						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
 					}
 				}};
 				co_await std::move(awaitable);
 			}(this, std::move(awaitable), allocator);
 		}
+
 		/**
 		 * \brief Wait for all active tasks to finish
 		 * \return auto Awaiter that pauses the current coroutine until all spawned task have finished.
 		 */
-		[[nodiscard]] auto join() {
+		[[nodiscard]] auto join() noexcept {
 			struct awaiter {
 				async_launch_scope* m_scope;
-				bool await_ready() noexcept {
-					std::unique_lock lck{m_scope->m_mtx};
-					return m_scope->m_count == 0;
+				constexpr bool await_ready() noexcept {
+					// Dont wait if theres nothing to await
+					return m_scope->m_count.load() == 0;
 				}
-				bool await_suspend(coroutine_handle<> hdl) {
-					std::unique_lock lck{m_scope->m_mtx};
-					if (m_scope->m_continuation) throw std::logic_error("duplicate join");
-					m_scope->m_continuation = hdl;
-					return m_scope->m_count != 0;
+				bool await_suspend(coroutine_handle<> hdl) const {
+					// Set our coroutine if there is noone waiting
+					void* expected = nullptr;
+					if (!m_scope->m_continuation.compare_exchange_strong(expected, hdl.address())) throw std::logic_error("duplicate join");
+					// We might have nothing left to wait on if the last coroutine finished in the meantime
+					return m_scope->m_count.load() != 0;
 				}
-				void await_resume() noexcept {
-					std::unique_lock lck{m_scope->m_mtx};
-					m_scope->m_continuation = nullptr;
-				}
+				constexpr void await_resume() const noexcept {}
 			};
 			return awaiter{this};
 		}
+
+		/**
+		 * \brief Returns the number of active task on this scope
+		 * \warning Only use this value for informational purposes, it might change at any time.
+		 */
+		size_t inflight_coroutines() const noexcept { return m_count.load(); }
+
+		/**
+		 * \brief Returns true if there is no active task currently running on this scope
+		 */
+		bool all_done() const noexcept { return inflight_coroutines() == 0; }
 	};
 } // namespace asyncpp
