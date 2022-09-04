@@ -83,7 +83,7 @@ namespace asyncpp {
 		[[nodiscard]] auto join() noexcept {
 			struct awaiter {
 				async_launch_scope* m_scope;
-				constexpr bool await_ready() noexcept {
+				bool await_ready() noexcept {
 					// Dont wait if theres nothing to await
 					return m_scope->m_count.load() == 0;
 				}
