@@ -33,6 +33,7 @@ Tested and supported compilers:
 Also checkout the async wrappers for other libraries:
 * [asyncpp-curl](https://github.com/Thalhammer/asyncpp-curl)
 * [asyncpp-grpc](https://github.com/Thalhammer/asyncpp-grpc)
+* [asyncpp-uring](https://github.com/Thalhammer/asyncpp-uring)
 
 The provided tools include:
 * Coroutine Types:
