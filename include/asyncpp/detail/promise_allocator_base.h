@@ -42,7 +42,8 @@ namespace asyncpp::detail {
 			} else {
 				allocator_type* info = static_cast<allocator_type*>(ptr) - 1;
 				auto alloc = std::move(*info);
-				std::allocator_traits<allocator_type>::deallocate(alloc, static_cast<std::byte*>(static_cast<void*>(info)), size + sizeof(Allocator));
+				std::allocator_traits<allocator_type>::deallocate(
+					alloc, static_cast<std::byte*>(static_cast<void*>(info)), size + sizeof(Allocator));
 			}
 		}
 	};

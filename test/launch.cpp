@@ -21,7 +21,8 @@ TEST(ASYNCPP, AsyncLaunchScope) {
 	bool spawn_did_execute = false, spawn_did_return = false, join_did_return = false;
 	async_launch_scope scope{};
 
-	scope.launch([](test_dispatcher& d, async_launch_scope& scope, bool& spawn_did_execute, bool& spawn_did_return) -> task<void> {
+	scope.launch([](test_dispatcher& d, async_launch_scope& scope, bool& spawn_did_execute,
+					bool& spawn_did_return) -> task<void> {
 		co_await defer{d};
 		spawn_did_execute = true;
 

@@ -106,7 +106,8 @@ namespace asyncpp {
 			std::queue<std::function<void()>> queue{};
 			std::thread thread;
 
-			thread_state(thread_pool* parent, size_t index) : pool{parent}, thread_index{index}, thread{[this]() { this->run(); }} {}
+			thread_state(thread_pool* parent, size_t index)
+				: pool{parent}, thread_index{index}, thread{[this]() { this->run(); }} {}
 
 			std::function<void()> try_steal_task() {
 				// Make sure we dont wait if its locked uniquely cause that might deadlock with resize()
@@ -170,7 +171,8 @@ namespace asyncpp {
 		};
 
 		inline static thread_local thread_state* g_current_thread{nullptr};
-		inline static thread_local std::minstd_rand g_queue_rand{std::hash<std::thread::id>{}(std::this_thread::get_id())};
+		inline static thread_local std::minstd_rand g_queue_rand{
+			std::hash<std::thread::id>{}(std::this_thread::get_id())};
 		std::atomic<size_t> m_target_size{0};
 		std::atomic<size_t> m_valid_size{0};
 		std::mutex m_resize_mtx{};

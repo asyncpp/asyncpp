@@ -146,7 +146,8 @@ namespace asyncpp {
 			if (m_ptr) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Assignment operator
-		ref& operator=(const ref& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		ref& operator=(const ref& other) noexcept(
+			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			reset(other.m_ptr, false);
 			return *this;
 		}
@@ -155,7 +156,8 @@ namespace asyncpp {
 		 * \param ptr The new pointer
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
-		void reset(T* ptr = nullptr, bool adopt_ref = false) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		void reset(T* ptr = nullptr,
+				   bool adopt_ref = false) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = ptr;
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);

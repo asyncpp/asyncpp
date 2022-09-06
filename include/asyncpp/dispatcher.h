@@ -22,9 +22,7 @@ namespace asyncpp {
 		 * \param d The dispatcher instance of this thread.
 		 * \return The previous dispatcher
 		 */
-		static dispatcher* current(dispatcher* d) {
-			return std::exchange(g_current_dispatcher, d);
-		}
+		static dispatcher* current(dispatcher* d) { return std::exchange(g_current_dispatcher, d); }
 
 	public:
 		/**

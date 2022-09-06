@@ -18,7 +18,8 @@ namespace asyncpp::detail {
 
 	/** \brief Check if T is a valid return type for await_suspend */
 	template<typename T>
-	concept is_valid_await_suspend_return_value = std::is_void_v<T> || std::is_same_v<T, bool> || is_coroutine_handle_v<T>;
+	concept is_valid_await_suspend_return_value =
+		std::is_void_v<T> || std::is_same_v<T, bool> || is_coroutine_handle_v<T>;
 
 	/** \brief Check if T implements the awaitable interface */
 	template<typename T>
