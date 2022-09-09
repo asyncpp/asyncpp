@@ -173,34 +173,34 @@ namespace asyncpp {
 			struct awaiter {
 				constexpr explicit awaiter(ref<state> state) : m_state(std::move(state)) {}
 				constexpr bool await_ready() noexcept {
-					assert(m_state);
-					std::unique_lock lck{m_state->m_mtx};
-					return !std::holds_alternative<std::monostate>(m_state->m_value);
+					assert(this->m_state);
+					std::unique_lock lck{this->m_state->m_mtx};
+					return !std::holds_alternative<std::monostate>(this->m_state->m_value);
 				}
 				bool await_suspend(coroutine_handle<void> h) noexcept {
-					assert(m_state);
+					assert(this->m_state);
 					assert(h);
-					std::unique_lock lck{m_state->m_mtx};
-					if (std::holds_alternative<std::monostate>(m_state->m_value)) {
-						m_state->m_on_result.emplace_back([h](TResult*, std::exception_ptr) { h.resume(); });
+					std::unique_lock lck{this->m_state->m_mtx};
+					if (std::holds_alternative<std::monostate>(this->m_state->m_value)) {
+						this->m_state->m_on_result.emplace_back([h](TResult*, std::exception_ptr) { h.resume(); });
 						return true;
 					} else
 						return false;
 				}
 				TResult& await_resume() {
-					assert(m_state);
-					std::unique_lock lck{m_state->m_mtx};
-					assert(!std::holds_alternative<std::monostate>(m_state->m_value));
-					if (std::holds_alternative<TResult>(m_state->m_value))
-						return std::get<TResult>(m_state->m_value);
+					assert(this->m_state);
+					std::unique_lock lck{this->m_state->m_mtx};
+					assert(!std::holds_alternative<std::monostate>(this->m_state->m_value));
+					if (std::holds_alternative<TResult>(this->m_state->m_value))
+						return std::get<TResult>(this->m_state->m_value);
 					else
-						std::rethrow_exception(std::get<std::exception_ptr>(m_state->m_value));
+						std::rethrow_exception(std::get<std::exception_ptr>(this->m_state->m_value));
 				}
 
 			private:
 				ref<state> m_state;
 			};
-			assert(m_state);
+			assert(this->m_state);
 			return awaiter{m_state};
 		}
 
