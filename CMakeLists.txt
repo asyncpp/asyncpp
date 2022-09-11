@@ -22,9 +22,9 @@ endif()
 if(ASYNCPP_BUILD_TEST)
   include(FetchContent)
   FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.12.1)
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.12.1)
   enable_testing()
   include(GoogleTest)
   if(HUNTER_ENABLED)
@@ -34,7 +34,9 @@ if(ASYNCPP_BUILD_TEST)
     add_library(GTest::Main ALIAS GTest::gtest_main)
   else()
     if(WIN32)
-        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+      set(gtest_force_shared_crt
+          ON
+          CACHE BOOL "" FORCE)
     endif()
     FetchContent_MakeAvailable(googletest)
   endif()
@@ -51,8 +53,8 @@ if(ASYNCPP_BUILD_TEST)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/scope_guard.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/task.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/thread_pool.cpp)
-  target_link_libraries(asyncpp-test PRIVATE asyncpp GTest::gtest GTest::gtest_main
-                                             Threads::Threads)
+  target_link_libraries(asyncpp-test PRIVATE asyncpp GTest::gtest
+                                             GTest::gtest_main Threads::Threads)
 
   if(ASYNCPP_WITH_ASAN)
     message(STATUS "Building with asan enabled")
