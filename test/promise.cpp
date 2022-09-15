@@ -150,6 +150,7 @@ TEST(ASYNCPP, PromiseFulfillTimeout) {
 	wait_mtx.lock();
 	std::thread([&]() {
 		wait_mtx.lock();
+		wait_mtx.unlock();
 		p.fulfill(42);
 	}).detach();
 	auto res = p.get(std::chrono::milliseconds(1));
@@ -168,6 +169,7 @@ TEST(ASYNCPP, PromiseRejectTimeout) {
 	wait_mtx.lock();
 	std::thread([&]() {
 		wait_mtx.lock();
+		wait_mtx.unlock();
 		p.reject<std::runtime_error>("");
 	}).detach();
 	auto res = p.get(std::chrono::milliseconds(1));

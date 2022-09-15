@@ -30,6 +30,8 @@ Tested and supported compilers:
 [img_ubuntu-2204_gcc-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2204_gcc-11/shields.json
 [Compiler-Support]: https://github.com/Thalhammer/asyncpp/actions/workflows/compiler-support.yml
 
+This library also supports Windows 10 / MSVC; the clang-cl support is, however, still a [WIP](https://github.com/llvm/llvm-project/issues/56300)
+
 Also checkout the async wrappers for other libraries:
 * [asyncpp-curl](https://github.com/Thalhammer/asyncpp-curl)
 * [asyncpp-grpc](https://github.com/Thalhammer/asyncpp-grpc)

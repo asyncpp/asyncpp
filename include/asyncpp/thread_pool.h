@@ -170,7 +170,9 @@ namespace asyncpp {
 		};
 
 		inline static thread_local thread_state* g_current_thread{nullptr};
-		inline static thread_local std::minstd_rand g_queue_rand{std::hash<std::thread::id>{}(std::this_thread::get_id())};
+		// This makes the conversion explicit to avoid compiler warning/error; only, should the hash not fit in an unsigned int, an error would occur;
+		// Would it be worth it to create a function to convert and check if hash <= unsigned_int?
+		inline static thread_local std::minstd_rand g_queue_rand{static_cast<unsigned int>(std::hash<std::thread::id>{}(std::this_thread::get_id()))};
 		std::atomic<size_t> m_target_size{0};
 		std::atomic<size_t> m_valid_size{0};
 		std::mutex m_resize_mtx{};
