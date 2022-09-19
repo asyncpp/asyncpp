@@ -79,8 +79,8 @@ namespace asyncpp {
 
 		/// \brief Construct from handle
 		task(handle_t h) noexcept : m_coro(h) {
-			assert(m_coro);
-			assert(!m_coro.done());
+			assert(this->m_coro);
+			assert(!this->m_coro.done());
 		}
 
 		/// \brief Construct from nullptr. The resulting task is invalid.
@@ -113,20 +113,20 @@ namespace asyncpp {
 				constexpr explicit awaiter(handle_t coro) : m_coro(coro) {}
 				constexpr bool await_ready() noexcept { return false; }
 				auto await_suspend(coroutine_handle<void> h) noexcept {
-					assert(m_coro);
+					assert(this->m_coro);
 					assert(h);
 					m_coro.promise().m_continuation = h;
 					return m_coro;
 				}
 				T await_resume() {
-					assert(m_coro);
-					return m_coro.promise().get();
+					assert(this->m_coro);
+					return this->m_coro.promise().get();
 				}
 
 			private:
 				handle_t m_coro;
 			};
-			assert(m_coro);
+			assert(this->m_coro);
 			return awaiter{m_coro};
 		}
 
