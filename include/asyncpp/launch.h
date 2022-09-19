@@ -106,7 +106,7 @@ namespace asyncpp {
 		 * \brief Returns the number of active task on this scope
 		 * \warning Only use this value for informational purposes, it might change at any time.
 		 */
-		size_t inflight_coroutines() const noexcept { return m_count.load(); }
+		size_t inflight_coroutines() const noexcept { return m_count.load(std::memory_order::relaxed); }
 
 		/**
 		 * \brief Returns true if there is no active task currently running on this scope
