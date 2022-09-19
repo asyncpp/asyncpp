@@ -1,4 +1,5 @@
 # Async++ library
+<img src="https://raw.githubusercontent.com/asyncpp/asyncpp/master/.github/logo.svg" alt="logo" width="100%" style="max-width:300px;margin-left:auto; margin-right:auto;">
 
 [![License Badge](https://img.shields.io/github/license/asyncpp/asyncpp)](https://github.com/asyncpp/asyncpp/blob/master/LICENSE)
 [![Stars Badge](https://img.shields.io/github/stars/asyncpp/asyncpp)](https://github.com/asyncpp/asyncpp/stargazers)
