@@ -13,17 +13,16 @@ namespace asyncpp {
 		~dispatcher() = default;
 
 		/**
-		 * \brief Set the current dispatcher for this thread.
+		 * \brief Set the current dispatcher for this thread and reurns the current one.
 		 * Implementers of dispatchers can use this to give convenient access to the current dispatcher, for example for yielding.
-		 * A dispatcher usually calls this function twice, once at the start of an event loop, before calling any callbacks and once at the very end (with a nullptr)
-		 * When this thread of the dispatcher is about to exit. The end call is optional if the implementation can guarantee that the thread will terminate afterwards.
+		 * A dispatcher usually calls this function once at the start of an event loop, before calling any callbacks and persists
+		 * the return value. It then calls it again after calling all callbacks and restores the previously persisted value. This
+		 * allows invoking a dispatcher loop from within another dispatcher. The end call is optional if the implementation can
+		 * guarantee that the thread will terminate afterwards.
 		 * \param d The dispatcher instance of this thread.
-		 * \throws std::logic_error if this thread is already assigned to a different dispatcher and the supplied pointer is not null.
+		 * \return The previous dispatcher
 		 */
-		static void current(dispatcher* d) {
-			if (g_current_dispatcher && d && g_current_dispatcher != d) throw std::logic_error("thread dispatcher already set");
-			g_current_dispatcher = d;
-		}
+		static dispatcher* current(dispatcher* d) { return std::exchange(g_current_dispatcher, d); }
 
 	public:
 		/**

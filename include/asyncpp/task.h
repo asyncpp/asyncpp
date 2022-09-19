@@ -19,7 +19,9 @@ namespace asyncpp {
 			task_promise_base& operator=(const task_promise_base&) = delete;
 			task_promise_base& operator=(task_promise_base&&) = delete;
 
-			coroutine_handle<TPromise> get_return_object() noexcept { return coroutine_handle<TPromise>::from_promise(*static_cast<TPromise*>(this)); }
+			coroutine_handle<TPromise> get_return_object() noexcept {
+				return coroutine_handle<TPromise>::from_promise(*static_cast<TPromise*>(this));
+			}
 
 			suspend_always initial_suspend() { return {}; }
 			auto final_suspend() noexcept {
@@ -35,10 +37,13 @@ namespace asyncpp {
 				return awaiter{};
 			}
 
-			void unhandled_exception() noexcept { m_value.template emplace<std::exception_ptr>(std::current_exception()); }
+			void unhandled_exception() noexcept {
+				m_value.template emplace<std::exception_ptr>(std::current_exception());
+			}
 
 			TVal rethrow_if_exception() {
-				if (std::holds_alternative<std::exception_ptr>(m_value)) std::rethrow_exception(std::get<std::exception_ptr>(m_value));
+				if (std::holds_alternative<std::exception_ptr>(m_value))
+					std::rethrow_exception(std::get<std::exception_ptr>(m_value));
 				return std::get<TVal>(std::move(this->m_value));
 			}
 
@@ -58,7 +63,8 @@ namespace asyncpp {
 
 		struct returned {};
 		template<ByteAllocator Allocator>
-		class task_promise<void, Allocator> : public task_promise_base<returned, Allocator, task_promise<void, Allocator>> {
+		class task_promise<void, Allocator>
+			: public task_promise_base<returned, Allocator, task_promise<void, Allocator>> {
 		public:
 			void return_void() { this->m_value.template emplace<returned>(); }
 			void get() { this->rethrow_if_exception(); }

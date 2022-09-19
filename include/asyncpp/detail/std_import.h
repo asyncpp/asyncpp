@@ -56,20 +56,33 @@ namespace std::experimental {
 		template<>
 		class __attribute__((__visibility__("default"))) coroutine_handle<void> {
 		public:
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr coroutine_handle() noexcept : __handle_(nullptr) {}
+			__attribute__((__visibility__("hidden")))
+			__attribute__((__always_inline__)) constexpr coroutine_handle() noexcept
+				: __handle_(nullptr) {}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr coroutine_handle(nullptr_t) noexcept : __handle_(nullptr) {}
+			__attribute__((__visibility__("hidden")))
+			__attribute__((__always_inline__)) constexpr coroutine_handle(nullptr_t) noexcept
+				: __handle_(nullptr) {}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) coroutine_handle& operator=(nullptr_t) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) coroutine_handle&
+			operator=(nullptr_t) noexcept {
 				__handle_ = nullptr;
 				return *this;
 			}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr void* address() const noexcept { return __handle_; }
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr void*
+			address() const noexcept {
+				return __handle_;
+			}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr explicit operator bool() const noexcept { return __handle_; }
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) constexpr explicit
+			operator bool() const noexcept {
+				return __handle_;
+			}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void operator()() const { resume(); }
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void operator()() const {
+				resume();
+			}
 
 			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void resume() const {
 				assert(__is_suspended());
@@ -88,14 +101,16 @@ namespace std::experimental {
 			}
 
 		public:
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle from_address(void* __addr) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle
+			from_address(void* __addr) noexcept {
 				coroutine_handle __tmp;
 				__tmp.__handle_ = __addr;
 				return __tmp;
 			}
 
 			// FIXME: Should from_address(nullptr) be allowed?
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle from_address(nullptr_t) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle
+			from_address(nullptr_t) noexcept {
 				return coroutine_handle(nullptr);
 			}
 
@@ -117,28 +132,28 @@ namespace std::experimental {
 		};
 
 		// 18.11.2.7 comparison operators:
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool operator==(coroutine_handle<> __x,
-																											coroutine_handle<> __y) noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+		operator==(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 			return __x.address() == __y.address();
 		}
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool operator!=(coroutine_handle<> __x,
-																											coroutine_handle<> __y) noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+		operator!=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 			return !(__x == __y);
 		}
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool operator<(coroutine_handle<> __x,
-																										   coroutine_handle<> __y) noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+		operator<(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 			return less<void*>()(__x.address(), __y.address());
 		}
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool operator>(coroutine_handle<> __x,
-																										   coroutine_handle<> __y) noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+		operator>(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 			return __y < __x;
 		}
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool operator<=(coroutine_handle<> __x,
-																											coroutine_handle<> __y) noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+		operator<=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 			return !(__x > __y);
 		}
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool operator>=(coroutine_handle<> __x,
-																											coroutine_handle<> __y) noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+		operator>=(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 			return !(__x < __y);
 		}
 
@@ -149,7 +164,8 @@ namespace std::experimental {
 		public:
 			// 18.11.2.1 construct/reset
 			using coroutine_handle<>::coroutine_handle;
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) coroutine_handle& operator=(nullptr_t) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) coroutine_handle&
+			operator=(nullptr_t) noexcept {
 				_Base::operator=(nullptr);
 				return *this;
 			}
@@ -159,7 +175,8 @@ namespace std::experimental {
 			}
 
 		public:
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle from_address(void* __addr) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle
+			from_address(void* __addr) noexcept {
 				coroutine_handle __tmp;
 				__tmp.__handle_ = __addr;
 				return __tmp;
@@ -169,7 +186,8 @@ namespace std::experimental {
 			// the deleted _Promise* overload doesn't make from_address(nullptr)
 			// ambiguous.
 			// FIXME: should from_address work with nullptr?
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle from_address(nullptr_t) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle
+			from_address(nullptr_t) noexcept {
 				return coroutine_handle(nullptr);
 			}
 
@@ -185,10 +203,12 @@ namespace std::experimental {
 											"pointers to the coroutine's promise type; use 'from_promise' instead");
 			}
 
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle from_promise(_Promise& __promise) noexcept {
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) static coroutine_handle
+			from_promise(_Promise& __promise) noexcept {
 				typedef typename remove_cv<_Promise>::type _RawPromise;
 				coroutine_handle __tmp;
-				__tmp.__handle_ = __builtin_coro_promise(std::addressof(const_cast<_RawPromise&>(__promise)), alignof(_Promise), true);
+				__tmp.__handle_ = __builtin_coro_promise(std::addressof(const_cast<_RawPromise&>(__promise)),
+														 alignof(_Promise), true);
 				return __tmp;
 			}
 		};
@@ -197,7 +217,8 @@ namespace std::experimental {
 		struct noop_coroutine_promise {};
 
 		template<>
-		class __attribute__((__visibility__("default"))) coroutine_handle<noop_coroutine_promise> : public coroutine_handle<> {
+		class __attribute__((__visibility__("default")))
+		coroutine_handle<noop_coroutine_promise> : public coroutine_handle<> {
 			using _Base = coroutine_handle<>;
 			using _Promise = noop_coroutine_promise;
 
@@ -214,7 +235,8 @@ namespace std::experimental {
 			constexpr void destroy() const noexcept {}
 
 		private:
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) friend coroutine_handle<noop_coroutine_promise>
+			__attribute__((__visibility__("hidden")))
+			__attribute__((__always_inline__)) friend coroutine_handle<noop_coroutine_promise>
 			noop_coroutine() noexcept;
 
 			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) coroutine_handle() noexcept {
@@ -224,21 +246,32 @@ namespace std::experimental {
 
 		using noop_coroutine_handle = coroutine_handle<noop_coroutine_promise>;
 
-		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) noop_coroutine_handle noop_coroutine() noexcept {
+		inline __attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) noop_coroutine_handle
+		noop_coroutine() noexcept {
 			return noop_coroutine_handle();
 		}
 #endif // __has_builtin(__builtin_coro_noop)
 
 		struct suspend_never {
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool await_ready() const noexcept { return true; }
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void await_suspend(coroutine_handle<>) const noexcept {}
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void await_resume() const noexcept {}
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+			await_ready() const noexcept {
+				return true;
+			}
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void
+			await_suspend(coroutine_handle<>) const noexcept {}
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void
+			await_resume() const noexcept {}
 		};
 
 		struct suspend_always {
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool await_ready() const noexcept { return false; }
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void await_suspend(coroutine_handle<>) const noexcept {}
-			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void await_resume() const noexcept {}
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) bool
+			await_ready() const noexcept {
+				return false;
+			}
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void
+			await_suspend(coroutine_handle<>) const noexcept {}
+			__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) void
+			await_resume() const noexcept {}
 		};
 
 	} // namespace coroutines_v1
@@ -248,7 +281,8 @@ namespace std {
 	template<class _Tp>
 	struct hash<std::experimental::coroutine_handle<_Tp>> {
 		using __arg_type = std::experimental::coroutine_handle<_Tp>;
-		__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) size_t operator()(__arg_type const& __v) const noexcept {
+		__attribute__((__visibility__("hidden"))) __attribute__((__always_inline__)) size_t
+		operator()(__arg_type const& __v) const noexcept {
 			return hash<void*>()(__v.address());
 		}
 	};

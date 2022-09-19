@@ -37,8 +37,9 @@ namespace asyncpp {
 	 */
 	template<typename Awaitable, ByteAllocator Allocator = default_allocator_type>
 	void launch(Awaitable&& awaitable, const Allocator& allocator = {}) {
-		[](std::decay_t<Awaitable> awaitable, const Allocator&) -> detail::launch_task<Allocator> { co_await std::move(awaitable); }(std::move(awaitable),
-																																	 allocator);
+		[](std::decay_t<Awaitable> awaitable, const Allocator&) -> detail::launch_task<Allocator> {
+			co_await std::move(awaitable);
+		}(std::move(awaitable), allocator);
 	}
 
 	/**
@@ -61,7 +62,8 @@ namespace asyncpp {
 		 */
 		template<typename Awaitable, ByteAllocator Allocator = default_allocator_type>
 		void launch(Awaitable&& awaitable, const Allocator& allocator = {}) {
-			[](async_launch_scope* scope, std::decay_t<Awaitable> awaitable, const Allocator&) -> detail::launch_task<Allocator> {
+			[](async_launch_scope* scope, std::decay_t<Awaitable> awaitable,
+			   const Allocator&) -> detail::launch_task<Allocator> {
 				scope->m_count.fetch_add(1);
 				scope_guard guard{[scope]() noexcept {
 					// If this is the last task
@@ -90,7 +92,8 @@ namespace asyncpp {
 				bool await_suspend(coroutine_handle<> hdl) const {
 					// Set our coroutine if there is noone waiting
 					void* expected = nullptr;
-					if (!m_scope->m_continuation.compare_exchange_strong(expected, hdl.address())) throw std::logic_error("duplicate join");
+					if (!m_scope->m_continuation.compare_exchange_strong(expected, hdl.address()))
+						throw std::logic_error("duplicate join");
 					// We might have nothing left to wait on if the last coroutine finished in the meantime
 					return m_scope->m_count.load() != 0;
 				}
@@ -103,7 +106,7 @@ namespace asyncpp {
 		 * \brief Returns the number of active task on this scope
 		 * \warning Only use this value for informational purposes, it might change at any time.
 		 */
-		size_t inflight_coroutines() const noexcept { return m_count.load(); }
+		size_t inflight_coroutines() const noexcept { return m_count.load(std::memory_order::relaxed); }
 
 		/**
 		 * \brief Returns true if there is no active task currently running on this scope

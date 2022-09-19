@@ -69,7 +69,8 @@ namespace asyncpp {
          */
 		void fulfill(TResult&& value) {
 			std::unique_lock lck{m_state->m_mtx};
-			if (!std::holds_alternative<std::monostate>(m_state->m_value)) throw std::logic_error("promise is not pending");
+			if (!std::holds_alternative<std::monostate>(m_state->m_value))
+				throw std::logic_error("promise is not pending");
 			m_state->m_value.template emplace<TResult>(std::move(value));
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);
@@ -92,7 +93,8 @@ namespace asyncpp {
          */
 		void reject(std::exception_ptr e) {
 			std::unique_lock lck{m_state->m_mtx};
-			if (!std::holds_alternative<std::monostate>(m_state->m_value)) throw std::logic_error("promise is not pending");
+			if (!std::holds_alternative<std::monostate>(m_state->m_value))
+				throw std::logic_error("promise is not pending");
 			m_state->m_value.template emplace<std::exception_ptr>(std::move(e));
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);

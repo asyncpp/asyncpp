@@ -19,7 +19,10 @@ TEST(ASYNCPP, TaskRecursive) {
 
 TEST(ASYNCPP, TaskAllocator) {
 	debug_allocator alloc{};
-	auto x = as_promise([](allocator_ref<debug_allocator>) -> task<int, allocator_ref<debug_allocator>> { co_return 100; }({alloc})).get();
+	auto x = as_promise([](allocator_ref<debug_allocator>) -> task<int, allocator_ref<debug_allocator>> {
+				 co_return 100;
+			 }({alloc}))
+				 .get();
 	ASSERT_EQ(x, 100);
 	ASSERT_EQ(alloc.allocated_sum, alloc.released_sum);
 	ASSERT_EQ(alloc.allocated_count, alloc.released_count);
@@ -30,5 +33,6 @@ TEST(ASYNCPP, TaskAllocator) {
 TEST(ASYNCPP, TaskAllocatorDefault) {
 	auto x = as_promise([]() -> task<int> { co_return 100; }()).get();
 	ASSERT_EQ(x, 100);
-	static_assert(std::is_same_v<task<int>::promise_type::allocator_type, default_allocator_type>, "Default allocator is not std::allocator");
+	static_assert(std::is_same_v<task<int>::promise_type::allocator_type, default_allocator_type>,
+				  "Default allocator is not std::allocator");
 }

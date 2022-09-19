@@ -106,7 +106,8 @@ namespace asyncpp {
 			std::queue<std::function<void()>> queue{};
 			std::thread thread;
 
-			thread_state(thread_pool* parent, size_t index) : pool{parent}, thread_index{index}, thread{[this]() { this->run(); }} {}
+			thread_state(thread_pool* parent, size_t index)
+				: pool{parent}, thread_index{index}, thread{[this]() { this->run(); }} {}
 
 			std::function<void()> try_steal_task() {
 				// Make sure we dont wait if its locked uniquely cause that might deadlock with resize()

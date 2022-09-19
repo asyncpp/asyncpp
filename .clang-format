@@ -1,7 +1,7 @@
 BasedOnStyle: LLVM
 BreakBeforeBraces: Attach
 
-ColumnLimit: 160 # Match GitHub UI
+ColumnLimit: 120 # Match GitHub UI
 
 UseTab: Always
 TabWidth: 4

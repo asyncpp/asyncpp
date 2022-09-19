@@ -21,7 +21,9 @@ namespace asyncpp {
 			generator_promise(const generator_promise&) = delete;
 			generator_promise(generator_promise&&) = delete;
 
-			coroutine_handle<generator_promise> get_return_object() noexcept { return coroutine_handle<generator_promise>::from_promise(*this); }
+			coroutine_handle<generator_promise> get_return_object() noexcept {
+				return coroutine_handle<generator_promise>::from_promise(*this);
+			}
 			suspend_always initial_suspend() noexcept { return {}; }
 			suspend_always final_suspend() noexcept { return {}; }
 
@@ -153,7 +155,8 @@ namespace asyncpp {
 	 * \return Generator of mapped elements.
 	 */
 	template<typename FUNC, typename T>
-	generator<std::invoke_result_t<FUNC&, typename generator<T>::iterator::reference>> fmap(FUNC func, generator<T> source) {
+	generator<std::invoke_result_t<FUNC&, typename generator<T>::iterator::reference>> fmap(FUNC func,
+																							generator<T> source) {
 		for (auto&& value : source) {
 			co_yield std::invoke(func, static_cast<decltype(value)>(value));
 		}
