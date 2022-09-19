@@ -1,7 +1,7 @@
 # Async++ library
 
-[![License Badge](https://img.shields.io/github/license/Thalhammer/asyncpp)](https://github.com/Thalhammer/asyncpp/blob/master/LICENSE)
-[![Stars Badge](https://img.shields.io/github/stars/Thalhammer/asyncpp)](https://github.com/Thalhammer/asyncpp/stargazers)
+[![License Badge](https://img.shields.io/github/license/asyncpp/asyncpp)](https://github.com/asyncpp/asyncpp/blob/master/LICENSE)
+[![Stars Badge](https://img.shields.io/github/stars/asyncpp/asyncpp)](https://github.com/asyncpp/asyncpp/stargazers)
 
 
 Async++ is a c++ library providing polyfills and a large set of general purpose utilities
@@ -19,23 +19,23 @@ Tested and supported compilers:
 |                                                                       | [![ubuntu-2204_gcc-11][img_ubuntu-2204_gcc-11]][Compiler-Support]     |
 
 
-[img_ubuntu-2004_clang-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2004_clang-10/shields.json
-[img_ubuntu-2004_clang-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2004_clang-11/shields.json
-[img_ubuntu-2004_clang-12]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2004_clang-12/shields.json
-[img_ubuntu-2004_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2004_gcc-10/shields.json
-[img_ubuntu-2204_clang-12]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2204_clang-12/shields.json
-[img_ubuntu-2204_clang-13]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2204_clang-13/shields.json
-[img_ubuntu-2204_clang-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2204_clang-14/shields.json
-[img_ubuntu-2204_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2204_gcc-10/shields.json
-[img_ubuntu-2204_gcc-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Thalhammer/asyncpp/badges/compiler/ubuntu-2204_gcc-11/shields.json
-[Compiler-Support]: https://github.com/Thalhammer/asyncpp/actions/workflows/compiler-support.yml
+[img_ubuntu-2004_clang-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_clang-10/shields.json
+[img_ubuntu-2004_clang-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_clang-11/shields.json
+[img_ubuntu-2004_clang-12]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_clang-12/shields.json
+[img_ubuntu-2004_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_gcc-10/shields.json
+[img_ubuntu-2204_clang-12]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_clang-12/shields.json
+[img_ubuntu-2204_clang-13]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_clang-13/shields.json
+[img_ubuntu-2204_clang-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_clang-14/shields.json
+[img_ubuntu-2204_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_gcc-10/shields.json
+[img_ubuntu-2204_gcc-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_gcc-11/shields.json
+[Compiler-Support]: https://github.com/asyncpp/asyncpp/actions/workflows/compiler-support.yml
 
 This library also supports Windows 10 / MSVC; the clang-cl support is, however, still a [WIP](https://github.com/llvm/llvm-project/issues/56300)
 
 Also checkout the async wrappers for other libraries:
-* [asyncpp-curl](https://github.com/Thalhammer/asyncpp-curl)
-* [asyncpp-grpc](https://github.com/Thalhammer/asyncpp-grpc)
-* [asyncpp-uring](https://github.com/Thalhammer/asyncpp-uring)
+* [asyncpp-curl](https://github.com/asyncpp/asyncpp-curl)
+* [asyncpp-grpc](https://github.com/asyncpp/asyncpp-grpc)
+* [asyncpp-uring](https://github.com/asyncpp/asyncpp-uring)
 
 The provided tools include:
 * Coroutine Types:
