@@ -132,22 +132,24 @@ namespace asyncpp {
 		T* m_ptr;
 
 	public:
+		static constexpr bool remove_ref_noexcept = noexcept(refcounted_remove_ref(std::declval<T*>()));
+		static constexpr bool add_ref_noexcept = noexcept(refcounted_add_ref(std::declval<T*>()));
+
 		/**
 		 * \brief Construct a new ref object
 		 * 
 		 * \param ptr The pointer to store
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
-		ref(T* ptr, bool adopt_ref = false) noexcept(noexcept(refcounted_add_ref(std::declval<T*>()))) : m_ptr{ptr} {
+		ref(T* ptr, bool adopt_ref = false) noexcept(add_ref_noexcept) : m_ptr{ptr} {
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Copy constructor
-		ref(const ref& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>()))) : m_ptr{other.m_ptr} {
+		ref(const ref& other) noexcept(add_ref_noexcept) : m_ptr{other.m_ptr} {
 			if (m_ptr) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Assignment operator
-		ref& operator=(const ref& other) noexcept(
-			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		ref& operator=(const ref& other) noexcept(add_ref_noexcept && remove_ref_noexcept) {
 			reset(other.m_ptr, false);
 			return *this;
 		}
@@ -157,13 +159,13 @@ namespace asyncpp {
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
 		void reset(T* ptr = nullptr,
-				   bool adopt_ref = false) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+				   bool adopt_ref = false) noexcept(add_ref_noexcept && remove_ref_noexcept) {
 			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = ptr;
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Destructor
-		~ref() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) { reset(); }
+		~ref() noexcept(remove_ref_noexcept) { reset(); }
 		/// \brief Dereference this handle
 		T* operator->() const noexcept { return m_ptr; }
 		/// \brief Dereference this handle
