@@ -149,7 +149,7 @@ namespace asyncpp {
 			if (m_ptr) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Assignment operator
-		ref& operator=(const ref& other) noexcept(add_ref_noexcept && remove_ref_noexcept) {
+		ref& operator=(const ref& other) noexcept(add_ref_noexcept&& remove_ref_noexcept) {
 			reset(other.m_ptr, false);
 			return *this;
 		}
@@ -158,8 +158,7 @@ namespace asyncpp {
 		 * \param ptr The new pointer
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
-		void reset(T* ptr = nullptr,
-				   bool adopt_ref = false) noexcept(add_ref_noexcept && remove_ref_noexcept) {
+		void reset(T* ptr = nullptr, bool adopt_ref = false) noexcept(add_ref_noexcept&& remove_ref_noexcept) {
 			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = ptr;
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);
