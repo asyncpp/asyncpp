@@ -24,10 +24,8 @@ namespace asyncpp::detail {
 	/** \brief Check if T implements the awaitable interface */
 	template<typename T>
 	concept is_awaiter = requires(T&& a) {
-		{ a.await_ready() }
-		->std::convertible_to<bool>;
-		{ a.await_suspend(std::declval<coroutine_handle<>>()) }
-		->is_valid_await_suspend_return_value<>;
+		{ a.await_ready() } -> std::convertible_to<bool>;
+		{ a.await_suspend(std::declval<coroutine_handle<>>()) } -> is_valid_await_suspend_return_value<>;
 		{a.await_resume()};
 	};
 
@@ -67,8 +65,7 @@ namespace asyncpp {
 	/** \brief Check if a type is a valid allocator providing std::byte allocations. */
 	template<class Allocator>
 	concept ByteAllocator = requires(Allocator&& a) {
-		{ std::allocator_traits<Allocator>::allocate(a, 0) }
-		->std::convertible_to<std::byte*>;
+		{ std::allocator_traits<Allocator>::allocate(a, 0) } -> std::convertible_to<std::byte*>;
 		{std::allocator_traits<Allocator>::deallocate(a, std::declval<std::byte*>(), 0)};
 	};
 } // namespace asyncpp

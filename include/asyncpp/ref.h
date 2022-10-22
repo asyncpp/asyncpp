@@ -13,12 +13,9 @@ namespace asyncpp {
 	template<typename T>
 	concept RefCount = requires() {
 		{T{std::declval<size_t>()}};
-		{ std::declval<T&>().fetch_increment() }
-		->std::convertible_to<size_t>;
-		{ std::declval<T&>().fetch_decrement() }
-		->std::convertible_to<size_t>;
-		{ std::declval<const T&>().count() }
-		->std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
+		{ std::declval<const T&>().count() } -> std::convertible_to<size_t>;
 	};
 
 	/**

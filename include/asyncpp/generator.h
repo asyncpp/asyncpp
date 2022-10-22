@@ -122,7 +122,7 @@ namespace asyncpp {
 
 		generator() noexcept : m_coro{nullptr} {}
 		generator(coroutine_handle<promise_type> coro) noexcept : m_coro{coro} {}
-		generator(generator && other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
+		generator(generator&& other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
 		generator(const generator&) = delete;
 		generator& operator=(generator&& other) noexcept {
 			m_coro = std::exchange(other.m_coro, m_coro);

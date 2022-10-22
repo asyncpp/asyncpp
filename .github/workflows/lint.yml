@@ -7,13 +7,13 @@ on:
 
 jobs:
   clang-format:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - run: |
-          sudo apt-get install clang-format
+          sudo apt-get install clang-format-14
           shopt -s globstar
       - uses: actions/checkout@v2
-      - run: find \( -name "*.h" -or -name "*.cpp" \) -exec clang-format -i {} \;
+      - run: find \( -name "*.h" -or -name "*.cpp" \) -exec clang-format-14 -i {} \;
       - run: find \( -name "*.h" -or -name "*.cpp" \) -exec ./.github/scripts/add-newline-if-missing.sh {} \;
       - uses: ./.github/actions/process-linting-results
         with:
