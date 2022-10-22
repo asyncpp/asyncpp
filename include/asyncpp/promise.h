@@ -68,6 +68,17 @@ namespace asyncpp {
          * \note Callbacks and waiting coroutines are resumed inside this call.
          */
 		void fulfill(TResult&& value) {
+			if (!try_fulfill(std::move(value)))
+				throw std::logic_error("promise is not pending");
+		}
+
+		/**
+         * \brief Try to fulfill the promise with a value.
+         * \return True if the promise was fulfilled, false if the promise was not pending
+         * \param value The value to store inside the promise
+         * \note Callbacks and waiting coroutines are resumed inside this call.
+         */
+		bool try_fulfill(TResult&& value) {
 			std::unique_lock lck{m_state->m_mtx};
 			if (!std::holds_alternative<std::monostate>(m_state->m_value))
 				throw std::logic_error("promise is not pending");
@@ -83,6 +94,7 @@ namespace asyncpp {
 					} catch (...) { std::terminate(); }
 				}
 			}
+			return true;
 		}
 
 		/**
@@ -92,9 +104,20 @@ namespace asyncpp {
          * \note Callbacks and waiting coroutines are resumed inside this call
          */
 		void reject(std::exception_ptr e) {
+			if(!try_reject(e))
+				throw std::logic_error("promise is not pending");
+		}
+
+		/**
+         * \brief Try to reject the promise with an exception
+         * \return True if the promise was rejected, false if the promise was not pending
+         * \param ex The exception to use for rejection
+         * \note Callbacks and waiting coroutines are resumed inside this call
+         */
+		bool try_reject(std::exception_ptr e) {
 			std::unique_lock lck{m_state->m_mtx};
 			if (!std::holds_alternative<std::monostate>(m_state->m_value))
-				throw std::logic_error("promise is not pending");
+				return false;
 			m_state->m_value.template emplace<std::exception_ptr>(std::move(e));
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);
@@ -107,6 +130,7 @@ namespace asyncpp {
 					} catch (...) { std::terminate(); }
 				}
 			}
+			return true;
 		}
 
 		/**
@@ -119,6 +143,18 @@ namespace asyncpp {
 		template<typename TException, typename... Args>
 		void reject(Args&&... args) {
 			reject(std::make_exception_ptr(TException{args...}));
+		}
+
+		/**
+         * \brief Try to reject the promise with an exception
+         * \return True if the promise was rejected, false if the promise was not pending
+         * \tparam TException The exception type to use for rejection
+         * \param args Arguments passed to the constructor of the exception type
+         * \note Callbacks and waiting coroutines are resumed inside this call
+         */
+		template<typename TException, typename... Args>
+		bool try_reject(Args&&... args) {
+			return try_reject(std::make_exception_ptr(TException{args...}));
 		}
 
 		/**

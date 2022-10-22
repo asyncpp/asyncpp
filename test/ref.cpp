@@ -50,3 +50,8 @@ TEST(ASYNCPP, RefCounted) {
 	delete ptr;
 	ASSERT_TRUE(did_destroy);
 }
+
+TEST(ASYNCPP, RefCountedNoexcept) {
+	static_assert(ref<test>::add_ref_noexcept);
+	static_assert(ref<test>::remove_ref_noexcept);
+}

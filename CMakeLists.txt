@@ -44,6 +44,7 @@ if(ASYNCPP_BUILD_TEST)
   add_executable(
     asyncpp-test
     ${CMAKE_CURRENT_SOURCE_DIR}/test/defer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/event.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/fire_and_forget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/generator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/launch.cpp

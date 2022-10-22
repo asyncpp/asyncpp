@@ -13,12 +13,9 @@ namespace asyncpp {
 	template<typename T>
 	concept RefCount = requires() {
 		{T{std::declval<size_t>()}};
-		{ std::declval<T&>().fetch_increment() }
-		->std::convertible_to<size_t>;
-		{ std::declval<T&>().fetch_decrement() }
-		->std::convertible_to<size_t>;
-		{ std::declval<const T&>().count() }
-		->std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
+		{ std::declval<const T&>().count() } -> std::convertible_to<size_t>;
 	};
 
 	/**
@@ -75,9 +72,11 @@ namespace asyncpp {
 	class intrusive_refcount {
 		mutable TCounter m_refcount{0};
 		template<IntrusiveRefCount T>
-		friend void refcounted_add_ref(const T*);
+		friend void refcounted_add_ref(const T*) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment()));
 		template<IntrusiveRefCount T>
-		friend void refcounted_remove_ref(const T*);
+		friend void
+		refcounted_remove_ref(const T*) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment()) &&
+												 std::is_nothrow_destructible_v<T>);
 
 	protected:
 		~intrusive_refcount() noexcept = default;
@@ -97,7 +96,7 @@ namespace asyncpp {
 	 * \param ptr The pointer to add a reference to
 	 */
 	template<IntrusiveRefCount T>
-	inline void refcounted_add_ref(const T* ptr) {
+	inline void refcounted_add_ref(const T* ptr) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment())) {
 		assert(ptr);
 		ptr->m_refcount.fetch_increment();
 	}
@@ -108,7 +107,9 @@ namespace asyncpp {
 	 * \param ptr The pointer to remove a reference from
 	 */
 	template<IntrusiveRefCount T>
-	inline void refcounted_remove_ref(const T* ptr) {
+	inline void
+	refcounted_remove_ref(const T* ptr) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment()) &&
+												 std::is_nothrow_destructible_v<T>) {
 		assert(ptr);
 		auto cnt = ptr->m_refcount.fetch_decrement();
 		if (cnt == 1) delete ptr;
@@ -136,6 +137,10 @@ namespace asyncpp {
 		static constexpr bool add_ref_noexcept = noexcept(refcounted_add_ref(std::declval<T*>()));
 
 		/**
+		 * \brief Construct an empty ref
+		 */
+		constexpr ref() noexcept : m_ptr(nullptr) {}
+		/**
 		 * \brief Construct a new ref object
 		 * 
 		 * \param ptr The pointer to store
@@ -148,9 +153,17 @@ namespace asyncpp {
 		ref(const ref& other) noexcept(add_ref_noexcept) : m_ptr{other.m_ptr} {
 			if (m_ptr) refcounted_add_ref(m_ptr);
 		}
+		/// \brief Move constructor
+		ref(ref&& other) noexcept : m_ptr{std::exchange(other.m_ptr, nullptr)} {}
 		/// \brief Assignment operator
 		ref& operator=(const ref& other) noexcept(add_ref_noexcept&& remove_ref_noexcept) {
 			reset(other.m_ptr, false);
+			return *this;
+		}
+		/// \brief Move assignment operator
+		ref& operator=(ref&& other) noexcept(remove_ref_noexcept) {
+			if (m_ptr) refcounted_remove_ref(m_ptr);
+			m_ptr = std::exchange(other.m_ptr, nullptr);
 			return *this;
 		}
 		/**
