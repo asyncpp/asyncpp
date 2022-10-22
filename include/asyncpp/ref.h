@@ -77,7 +77,7 @@ namespace asyncpp {
 		template<IntrusiveRefCount T>
 		friend void refcounted_add_ref(const T*) noexcept;
 		template<IntrusiveRefCount T>
-		friend void refcounted_remove_ref(const T*) noexcept(std::is_nothrow_destructible_v<T>);
+		friend void refcounted_remove_ref(const T*) noexcept;
 
 	protected:
 		~intrusive_refcount() noexcept = default;
@@ -108,7 +108,8 @@ namespace asyncpp {
 	 * \param ptr The pointer to remove a reference from
 	 */
 	template<IntrusiveRefCount T>
-	inline void refcounted_remove_ref(const T* ptr) noexcept(std::is_nothrow_destructible_v<T>) {
+	inline void refcounted_remove_ref(const T* ptr) noexcept {
+		static_assert(std::is_nothrow_destructible_v<T>, "Destructor needs to be noexcept!");
 		assert(ptr);
 		auto cnt = ptr->m_refcount.fetch_decrement();
 		if (cnt == 1) delete ptr;

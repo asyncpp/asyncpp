@@ -42,17 +42,13 @@ namespace asyncpp {
          * \brief Query if the event is currently set
          * \note Do not base decisions on this value, as it might change at any time by a call to reset()
          */
-		[[nodiscard]] bool is_set() const noexcept {
-			return m_state.load(std::memory_order::acquire) == state_set;
-		}
+		[[nodiscard]] bool is_set() const noexcept { return m_state.load(std::memory_order::acquire) == state_set; }
 
 		/**
          * \brief Query if the event is currently being awaited
          * \note Do not base decisions on this value, as it might change at any time by a call to set()
          */
-		[[nodiscard]] bool is_awaited() const noexcept {
-			return m_state.load(std::memory_order::acquire) > state_set;
-		}
+		[[nodiscard]] bool is_awaited() const noexcept { return m_state.load(std::memory_order::acquire) > state_set; }
 
 		/**
          * \brief Set the event
