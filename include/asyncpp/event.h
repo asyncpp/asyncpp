@@ -5,7 +5,7 @@
 #include <cassert>
 
 namespace asyncpp {
-    /**
+	/**
      * \brief Simple manual reset event supporting a single consumer.
      * 
      * This is similar in concept to a std::condition_variable and allows
@@ -29,41 +29,38 @@ namespace asyncpp {
      */
 	class single_consumer_event {
 	public:
-        /**
+		/**
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-        constexpr single_consumer_event(bool set_initially = false) noexcept
-            : m_state(set_initially ? state_set : state_unset)
-        {}
+		constexpr single_consumer_event(bool set_initially = false) noexcept
+			: m_state(set_initially ? state_set : state_unset) {}
 #ifndef NDEBUG
-        ~single_consumer_event() noexcept {
-            assert(m_state.load(std::memory_order::acquire) <= state_set);
-        }
+		~single_consumer_event() noexcept { assert(m_state.load(std::memory_order::acquire) <= state_set); }
 #endif
-        /**
+		/**
          * \brief Query if the event is currently set
          * \note Do not base decisions on this value, as it might change at any time by a call to reset()
          */
-		[[nodiscard]] constexpr bool is_set() const noexcept {
+		[[nodiscard]] bool is_set() const noexcept {
 			return m_state.load(std::memory_order::acquire) == state_set;
 		}
 
-        /**
+		/**
          * \brief Query if the event is currently being awaited
          * \note Do not base decisions on this value, as it might change at any time by a call to set()
          */
-		[[nodiscard]] constexpr bool is_awaited() const noexcept {
+		[[nodiscard]] bool is_awaited() const noexcept {
 			return m_state.load(std::memory_order::acquire) > state_set;
 		}
 
-        /**
+		/**
          * \brief Set the event
          * \note Depending on the way the event was awaited, the suspended coroutine might resume in this call.
          * \param resume_dispatcher Fallback dispatcher to use for resuming the coroutine if none was passed to wait()
          * \return true if a coroutine has been waiting and was resumed
          */
-		constexpr bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
+		bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
 			auto state = m_state.exchange(state_set, std::memory_order::acq_rel);
 			if (state != state_unset && state != state_set) {
 				auto await = reinterpret_cast<awaiter*>(state);
@@ -71,25 +68,25 @@ namespace asyncpp {
 				assert(await->m_handle);
 				if (await->m_dispatcher != nullptr) {
 					await->m_dispatcher->push([hdl = await->m_handle]() { hdl.resume(); });
-				} else if(resume_dispatcher != nullptr) {
-                    resume_dispatcher->push([hdl = await->m_handle]() { hdl.resume(); });
-                } else {
+				} else if (resume_dispatcher != nullptr) {
+					resume_dispatcher->push([hdl = await->m_handle]() { hdl.resume(); });
+				} else {
 					await->m_handle.resume();
 				}
-                return true;
+				return true;
 			}
-            return false;
+			return false;
 		}
-		
-        /**
+
+		/**
          * \brief Reset the event back to unset
          */
-        constexpr void reset() noexcept {
+		void reset() noexcept {
 			uintptr_t old_state = state_set;
 			m_state.compare_exchange_strong(old_state, state_unset, std::memory_order::relaxed);
 		}
-		
-        /**
+
+		/**
          * \brief Suspend the current coroutine until the event is set
          * 
          * If the event is already set, it resumes immediately on the current thread, otherwise the coroutine
@@ -97,9 +94,9 @@ namespace asyncpp {
          * dispatcher if the thread belongs to a dispatcher or inside set() if not.
          * \return Awaitable
          */
-        [[nodiscard]] auto operator co_await() noexcept { return awaiter{this, dispatcher::current()}; }
+		[[nodiscard]] auto operator co_await() noexcept { return awaiter{this, dispatcher::current()}; }
 
-        /**
+		/**
          * \brief Suspend the current coroutine until the event is set
          * 
          * If the event is already set, it resumes immediately on the current thread, otherwise the coroutine

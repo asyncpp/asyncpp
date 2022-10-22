@@ -68,8 +68,7 @@ namespace asyncpp {
          * \note Callbacks and waiting coroutines are resumed inside this call.
          */
 		void fulfill(TResult&& value) {
-			if (!try_fulfill(std::move(value)))
-				throw std::logic_error("promise is not pending");
+			if (!try_fulfill(std::move(value))) throw std::logic_error("promise is not pending");
 		}
 
 		/**
@@ -104,8 +103,7 @@ namespace asyncpp {
          * \note Callbacks and waiting coroutines are resumed inside this call
          */
 		void reject(std::exception_ptr e) {
-			if(!try_reject(e))
-				throw std::logic_error("promise is not pending");
+			if (!try_reject(e)) throw std::logic_error("promise is not pending");
 		}
 
 		/**
@@ -116,8 +114,7 @@ namespace asyncpp {
          */
 		bool try_reject(std::exception_ptr e) {
 			std::unique_lock lck{m_state->m_mtx};
-			if (!std::holds_alternative<std::monostate>(m_state->m_value))
-				return false;
+			if (!std::holds_alternative<std::monostate>(m_state->m_value)) return false;
 			m_state->m_value.template emplace<std::exception_ptr>(std::move(e));
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);

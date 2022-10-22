@@ -13,9 +13,12 @@ namespace asyncpp {
 	template<typename T>
 	concept RefCount = requires() {
 		{T{std::declval<size_t>()}};
-		{ std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
-		{ std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
-		{ std::declval<const T&>().count() } -> std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_increment() }
+		->std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_decrement() }
+		->std::convertible_to<size_t>;
+		{ std::declval<const T&>().count() }
+		->std::convertible_to<size_t>;
 	};
 
 	/**
@@ -72,11 +75,9 @@ namespace asyncpp {
 	class intrusive_refcount {
 		mutable TCounter m_refcount{0};
 		template<IntrusiveRefCount T>
-		friend void refcounted_add_ref(const T*) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment()));
+		friend void refcounted_add_ref(const T*) noexcept;
 		template<IntrusiveRefCount T>
-		friend void
-		refcounted_remove_ref(const T*) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment()) &&
-												 std::is_nothrow_destructible_v<T>);
+		friend void refcounted_remove_ref(const T*) noexcept(std::is_nothrow_destructible_v<T>);
 
 	protected:
 		~intrusive_refcount() noexcept = default;
@@ -96,7 +97,7 @@ namespace asyncpp {
 	 * \param ptr The pointer to add a reference to
 	 */
 	template<IntrusiveRefCount T>
-	inline void refcounted_add_ref(const T* ptr) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment())) {
+	inline void refcounted_add_ref(const T* ptr) noexcept {
 		assert(ptr);
 		ptr->m_refcount.fetch_increment();
 	}
@@ -107,9 +108,7 @@ namespace asyncpp {
 	 * \param ptr The pointer to remove a reference from
 	 */
 	template<IntrusiveRefCount T>
-	inline void
-	refcounted_remove_ref(const T* ptr) noexcept(noexcept(std::declval<T&>().m_refcount.fetch_increment()) &&
-												 std::is_nothrow_destructible_v<T>) {
+	inline void refcounted_remove_ref(const T* ptr) noexcept(std::is_nothrow_destructible_v<T>) {
 		assert(ptr);
 		auto cnt = ptr->m_refcount.fetch_decrement();
 		if (cnt == 1) delete ptr;
