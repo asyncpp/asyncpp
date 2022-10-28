@@ -12,7 +12,7 @@ jobs:
       - run: |
           sudo apt-get install clang-format-14
           shopt -s globstar
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: find \( -name "*.h" -or -name "*.cpp" \) -exec clang-format-14 -i {} \;
       - run: find \( -name "*.h" -or -name "*.cpp" \) -exec ./.github/scripts/add-newline-if-missing.sh {} \;
       - uses: ./.github/actions/process-linting-results
@@ -28,7 +28,7 @@ jobs:
       - run: |
           pip install cmakelang
           shopt -s globstar
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: find \( -name "CMakeLists.txt" -or -name "*.cmake" \) -exec cmake-format -i {} \;
       - uses: ./.github/actions/process-linting-results
         with:
@@ -37,7 +37,7 @@ jobs:
   line-ending:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: git add --renormalize .
       - uses: ./.github/actions/process-linting-results
         with:

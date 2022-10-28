@@ -38,7 +38,7 @@ jobs:
       ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install CMake
         uses: lukka/get-cmake@latest
       - name: Install GTest
@@ -52,7 +52,7 @@ jobs:
       - name: Update Result
         id: status
         if: ${{ always() }}
-        run: echo "::set-output name=${{ matrix.compiler.tag }}::${{ job.status }}"
+        run: echo "${{ matrix.compiler.tag }}=${{ job.status }}" >> $GITHUB_OUTPUT
 
   badge-upload:
     if:  ${{ github.event_name == 'push' && always() }}
@@ -61,7 +61,7 @@ jobs:
     name: Publish badges
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Publish Badges
         uses: ./.github/actions/badge
         with:
