@@ -152,7 +152,7 @@ namespace asyncpp {
 						cb();
 						continue;
 					}
-					{
+					if(thread_index < pool->m_target_size) {
 						std::unique_lock lck{mutex};
 						cv.wait_for(lck, std::chrono::milliseconds{100});
 					}

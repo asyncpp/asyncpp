@@ -20,10 +20,11 @@ TEST(ASYNCPP, ThreadPool) {
 	thread_pool pool;
 	ASSERT_EQ(pool.size(), std::thread::hardware_concurrency());
 
-	auto id = as_promise([](thread_pool& p) -> task<std::thread::id> {
-				  co_await defer{p};
-				  co_return std::this_thread::get_id();
-			  }(pool))
-				  .get();
-	ASSERT_NE(id, std::this_thread::get_id());
+	auto f = as_promise([](thread_pool& p) -> task<std::thread::id> {
+		co_await defer{p};
+		co_return std::this_thread::get_id();
+	}(pool));
+	auto status = f.wait_for(std::chrono::seconds(1));
+	ASSERT_EQ(status, std::future_status::ready);
+	ASSERT_NE(f.get(), std::this_thread::get_id());
 }
