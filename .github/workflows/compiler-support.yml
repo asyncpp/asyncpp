@@ -49,10 +49,10 @@ jobs:
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
-        if: matrix.os != 'windows-latest'
+        if: contains(matrix.compiler.runs-on, 'windows') != true
         run: ./build/asyncpp-test
       - name: Test
-        if: matrix.os == 'windows-latest'
+        if: contains(matrix.compiler.runs-on, 'windows')
         run: .\build\Debug\asyncpp-test.exe
       - name: Update Result
         id: status
