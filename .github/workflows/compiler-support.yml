@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v3
       - name: CI Test
         if: contains(matrix.compiler.runs-on, 'macos')
-        run: find / -name "clang++-13"
+        run: brew list
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'windows') != true
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON
