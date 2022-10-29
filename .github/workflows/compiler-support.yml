@@ -59,7 +59,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: CI Test
-        if: contains(matrix.compiler.runs-on, 'macos') != true
+        if: contains(matrix.compiler.runs-on, 'macos')
         run: find / -name "clang++-13"
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'windows') != true
