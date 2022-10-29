@@ -63,9 +63,9 @@ namespace asyncpp {
 				assert(await->m_parent == this);
 				assert(await->m_handle);
 				if (await->m_dispatcher != nullptr) {
-					await->m_dispatcher->push([hdl = await->m_handle]() { hdl.resume(); });
+					await->m_dispatcher->push([hdl = await->m_handle]() mutable { hdl.resume(); });
 				} else if (resume_dispatcher != nullptr) {
-					resume_dispatcher->push([hdl = await->m_handle]() { hdl.resume(); });
+					resume_dispatcher->push([hdl = await->m_handle]() mutable { hdl.resume(); });
 				} else {
 					await->m_handle.resume();
 				}
