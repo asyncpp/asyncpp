@@ -21,6 +21,8 @@ jobs:
           - { tag: "ubuntu-2004_clang-10", name: "Ubuntu 20.04 Clang 10", cxx: "/usr/bin/clang++-10", cc: "/usr/bin/clang-10", runs-on: "ubuntu-20.04" }
           - { tag: "ubuntu-2004_gcc-10", name: "Ubuntu 20.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
           - { tag: "windows-2022_msvc17", name: "Windows Server 2022 MSVC 17", cxx: "", cc: "", runs-on: "windows-2022" }
+          - { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
+          - { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "macos-11" }
     runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
     env:
@@ -38,6 +40,7 @@ jobs:
       ubuntu-2004_clang-10: ${{ steps.status.outputs.ubuntu-2004_clang-10 }}
       ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
       windows-2022_msvc17: ${{ steps.status.outputs.windows-2022_msvc17 }}
+      windows-2019_msvc16: ${{ steps.status.outputs.windows-2019_msvc16 }}
     defaults:
       run:
         shell: bash -l {0}
