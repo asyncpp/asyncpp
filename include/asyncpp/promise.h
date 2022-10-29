@@ -217,7 +217,8 @@ namespace asyncpp {
 					assert(h);
 					std::unique_lock lck{this->m_state->m_mtx};
 					if (std::holds_alternative<std::monostate>(this->m_state->m_value)) {
-						this->m_state->m_on_result.emplace_back([h](TResult*, std::exception_ptr) mutable { h.resume(); });
+						this->m_state->m_on_result.emplace_back(
+							[h](TResult*, std::exception_ptr) mutable { h.resume(); });
 						return true;
 					} else
 						return false;
