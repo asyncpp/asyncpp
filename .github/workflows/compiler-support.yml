@@ -22,12 +22,12 @@ jobs:
 #          - { tag: "ubuntu-2004_gcc-10", name: "Ubuntu 20.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
 #          - { tag: "windows-2022_msvc17", name: "Windows Server 2022 MSVC 17", cxx: "", cc: "", runs-on: "windows-2022" }
 #          - { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
-#          - { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "g++-10", cc: "gcc-10", runs-on: "macos-11" }
-#          - { tag: "macos-11_gcc-11", name: "MacOS 11 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-11" }
-          - { tag: "macos-11_clang-13", name: "MacOS 11 Clang 13", cxx: "clang++-13", cc: "clang-13", runs-on: "macos-11" }
-#          - { tag: "macos-11_clang-14", name: "MacOS 11 Clang 14", cxx: "clang++-14", cc: "clang-14", runs-on: "macos-11" }
-#          - { tag: "macos-12_gcc-11", name: "MacOS 12 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-12" }
-#          - { tag: "macos-12_clang-14", name: "MacOS 12 Clang 14", cxx: "clang++-14", cc: "clang-14", runs-on: "macos-12" }
+          - { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "g++-10", cc: "gcc-10", runs-on: "macos-11" }
+          - { tag: "macos-11_gcc-11", name: "MacOS 11 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-11" }
+          - { tag: "macos-11_clang-13", name: "MacOS 11 Clang 13", cxx: "", cc: "", runs-on: "macos-11" }
+          - { tag: "macos-11_clang-14", name: "MacOS 11 Clang 14", cxx: "/usr/local/Cellar/llvm@14/14.0.6/bin/clang++", cc: "/usr/local/Cellar/llvm@14/14.0.6/bin/clang", runs-on: "macos-11" }
+          - { tag: "macos-12_gcc-11", name: "MacOS 12 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-12" }
+          - { tag: "macos-12_clang-14", name: "MacOS 12 Clang 14", cxx: "", cc: "", runs-on: "macos-12" }
     runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
 #    env:
