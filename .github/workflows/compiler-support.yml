@@ -59,10 +59,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Configure
-        if: contains(matrix.compiler.runs-on, 'windows') != true
-        run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON
+        if: contains(matrix.compiler.runs-on, 'ubuntu')
+        run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON
       - name: Configure
-        if: contains(matrix.compiler.runs-on, 'windows')
+        if: contains(matrix.compiler.runs-on, 'ubuntu') != true
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=OFF
       - name: Build
         run: cmake --build build --config Debug
