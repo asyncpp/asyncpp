@@ -49,9 +49,11 @@ jobs:
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
-        run: |
-          cd build
-          ctest -C Debug --output-on-failure --verbose
+        if: matrix.os != 'windows-latest'
+        run: ./build/asyncpp-test
+      - name: Test
+        if: matrix.os == 'windows-latest'
+        run: .\build\Debug\asyncpp-test.exe
       - name: Update Result
         id: status
         if: ${{ always() }}
