@@ -79,7 +79,7 @@ namespace asyncpp {
 				bool await_ready() const noexcept { return std::chrono::steady_clock::now() >= m_timeout; }
 				void await_suspend(coroutine_handle<> h) {
 					m_parent->schedule(
-						[this, h](bool res) {
+						[this, h](bool res) mutable {
 							m_result = res;
 							h.resume();
 						},
