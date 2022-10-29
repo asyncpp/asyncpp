@@ -45,7 +45,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Configure
+        if: contains(matrix.compiler.runs-on, 'windows') != true
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON
+      - name: Configure
+        if: contains(matrix.compiler.runs-on, 'windows')
+        run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=OFF
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
@@ -53,7 +57,7 @@ jobs:
         run: ./build/asyncpp-test
       - name: Test
         if: contains(matrix.compiler.runs-on, 'windows')
-        run: .\build\Debug\asyncpp-test.exe
+        run: build\Debug\asyncpp-test.exe
       - name: Update Result
         id: status
         if: ${{ always() }}
