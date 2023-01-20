@@ -58,6 +58,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Info
+        if: contains(matrix.compiler.runs-on, 'macos-11')
+        run: brew --prefix llvm@14
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON
