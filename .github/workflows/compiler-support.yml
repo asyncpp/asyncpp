@@ -35,29 +35,34 @@ jobs:
       CC: ${{ matrix.compiler.cc }}
     outputs:
       # Because github wants us to suffer we need to list out every output instead of using a matrix statement or some kind of dynamic setting
-      ubuntu-2204_clang-12: ${{ steps.status.outputs.ubuntu-2204_clang-12 }}
-      ubuntu-2204_clang-13: ${{ steps.status.outputs.ubuntu-2204_clang-13 }}
-      ubuntu-2204_clang-14: ${{ steps.status.outputs.ubuntu-2204_clang-14 }}
-      ubuntu-2204_gcc-10: ${{ steps.status.outputs.ubuntu-2204_gcc-10 }}
-      ubuntu-2204_gcc-11: ${{ steps.status.outputs.ubuntu-2204_gcc-11 }}
-      ubuntu-2004_clang-12: ${{ steps.status.outputs.ubuntu-2004_clang-12 }}
-      ubuntu-2004_clang-11: ${{ steps.status.outputs.ubuntu-2004_clang-11 }}
-      ubuntu-2004_clang-10: ${{ steps.status.outputs.ubuntu-2004_clang-10 }}
-      ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
-      windows-2022_msvc17: ${{ steps.status.outputs.windows-2022_msvc17 }}
-      windows-2019_msvc16: ${{ steps.status.outputs.windows-2019_msvc16 }}
-      macos-11_gcc-10: ${{ steps.status.outputs.macos-11_gcc-10 }}
-      macos-11_gcc-11: ${{ steps.status.outputs.macos-11_gcc-11 }}
-      macos-11_clang-13: ${{ steps.status.outputs.macos-11_clang-13 }}
+      #ubuntu-2204_clang-12: ${{ steps.status.outputs.ubuntu-2204_clang-12 }}
+      #ubuntu-2204_clang-13: ${{ steps.status.outputs.ubuntu-2204_clang-13 }}
+      #ubuntu-2204_clang-14: ${{ steps.status.outputs.ubuntu-2204_clang-14 }}
+      #ubuntu-2204_gcc-10: ${{ steps.status.outputs.ubuntu-2204_gcc-10 }}
+      #ubuntu-2204_gcc-11: ${{ steps.status.outputs.ubuntu-2204_gcc-11 }}
+      #ubuntu-2004_clang-12: ${{ steps.status.outputs.ubuntu-2004_clang-12 }}
+      #ubuntu-2004_clang-11: ${{ steps.status.outputs.ubuntu-2004_clang-11 }}
+      #ubuntu-2004_clang-10: ${{ steps.status.outputs.ubuntu-2004_clang-10 }}
+      #ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
+      #windows-2022_msvc17: ${{ steps.status.outputs.windows-2022_msvc17 }}
+      #windows-2019_msvc16: ${{ steps.status.outputs.windows-2019_msvc16 }}
+      #macos-11_gcc-10: ${{ steps.status.outputs.macos-11_gcc-10 }}
+      #macos-11_gcc-11: ${{ steps.status.outputs.macos-11_gcc-11 }}
+      #macos-11_clang-13: ${{ steps.status.outputs.macos-11_clang-13 }}
       macos-11_clang-14: ${{ steps.status.outputs.macos-11_clang-14 }}
-      macos-12_gcc-11: ${{ steps.status.outputs.macos-12_gcc-11 }}
-      macos-12_clang-14: ${{ steps.status.outputs.macos-12_clang-14 }}
+      #macos-12_gcc-11: ${{ steps.status.outputs.macos-12_gcc-11 }}
+      #macos-12_clang-14: ${{ steps.status.outputs.macos-12_clang-14 }}
     defaults:
       run:
         shell: bash -l {0}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Info
+        if: contains(matrix.compiler.runs-on, 'macos-11')
+      - run: |
+          ls -las `brew --prefix llvm@14`
+          tree `brew --prefix llvm@14`
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON
