@@ -36,6 +36,7 @@ Tested and supported compilers:
 [img_windows-2019_msvc16]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/windows-2019_msvc16/shields.json
 [img_windows-2022_msvc17]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/windows-2022_msvc17/shields.json
 [img_macos-11_clang-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_clang-14/shields.json
+[img_macos-11_clang-15]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_clang-15/shields.json
 [img_macos-11_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_gcc-10/shields.json
 [img_macos-11_gcc-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_gcc-11/shields.json
 [img_macos-12_clang-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-12_clang-14/shields.json
