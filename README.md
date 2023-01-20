@@ -13,7 +13,7 @@ patches and improvements for other platforms are welcome.
 Tested and supported compilers:
 | Linux                                                                 | Windows                                                             | MacOS (best effort)                                                 |
 |-----------------------------------------------------------------------|---------------------------------------------------------------------|---------------------------------------------------------------------|
-| [![ubuntu-2004_clang-10][img_ubuntu-2004_clang-10]][Compiler-Support] | [![windows-2019_msvc16][img_windows-2019_msvc16]][Compiler-Support] | [![macos-11_clang-14][img_macos-11_clang-14]][Compiler-Support]     |
+| [![ubuntu-2004_clang-10][img_ubuntu-2004_clang-10]][Compiler-Support] | [![windows-2019_msvc16][img_windows-2019_msvc16]][Compiler-Support] | [![macos-11_clang-15][img_macos-11_clang-15]][Compiler-Support]     |
 | [![ubuntu-2004_clang-11][img_ubuntu-2004_clang-11]][Compiler-Support] | [![windows-2022_msvc17][img_windows-2022_msvc17]][Compiler-Support] | [![macos-11_gcc-10][img_macos-11_gcc-10]][Compiler-Support]         |
 | [![ubuntu-2004_clang-12][img_ubuntu-2004_clang-12]][Compiler-Support] |                                                                     | [![macos-11_gcc-11][img_macos-11_gcc-11]][Compiler-Support]         |
 | [![ubuntu-2004_gcc-10][img_ubuntu-2004_gcc-10]][Compiler-Support]     |                                                                     | [![macos-12_clang-14][img_macos-12_clang-14]][Compiler-Support]     |
