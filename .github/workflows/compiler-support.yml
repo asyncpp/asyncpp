@@ -61,8 +61,8 @@ jobs:
       - name: Info
         if: contains(matrix.compiler.runs-on, 'macos-11')
         run: |
-          ls -las `brew --prefix llvm@14`
-          tree `brew --prefix llvm@14`
+          find /opt/
+          find /usr/
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON
