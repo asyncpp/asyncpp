@@ -11,25 +11,25 @@ jobs:
       fail-fast: false
       matrix:
         compiler:
-          #- { tag: "ubuntu-2204_clang-12", name: "Ubuntu 22.04 Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-22.04" }
-          #- { tag: "ubuntu-2204_clang-13", name: "Ubuntu 22.04 Clang 13", cxx: "/usr/bin/clang++-13", cc: "/usr/bin/clang-13", runs-on: "ubuntu-22.04" }
-          #- { tag: "ubuntu-2204_clang-14", name: "Ubuntu 22.04 Clang 14", cxx: "/usr/bin/clang++-14", cc: "/usr/bin/clang-14", runs-on: "ubuntu-22.04" }
-          #- { tag: "ubuntu-2204_gcc-10", name: "Ubuntu 22.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-22.04" }
-          #- { tag: "ubuntu-2204_gcc-11", name: "Ubuntu 22.04 G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
-          #- { tag: "ubuntu-2004_clang-12", name: "Ubuntu 20.04 Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-20.04" }
-          #- { tag: "ubuntu-2004_clang-11", name: "Ubuntu 20.04 Clang 11", cxx: "/usr/bin/clang++-11", cc: "/usr/bin/clang-11", runs-on: "ubuntu-20.04" }
-          #- { tag: "ubuntu-2004_clang-10", name: "Ubuntu 20.04 Clang 10", cxx: "/usr/bin/clang++-10", cc: "/usr/bin/clang-10", runs-on: "ubuntu-20.04" }
-          #- { tag: "ubuntu-2004_gcc-10", name: "Ubuntu 20.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
-          #- { tag: "windows-2022_msvc17", name: "Windows Server 2022 MSVC 17", cxx: "", cc: "", runs-on: "windows-2022" }
-          #- { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
-          #- { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "g++-10", cc: "gcc-10", runs-on: "macos-11" }
-          #- { tag: "macos-11_gcc-11", name: "MacOS 11 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-11" }
+          - { tag: "ubuntu-2204_clang-12", name: "Ubuntu 22.04 Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_clang-13", name: "Ubuntu 22.04 Clang 13", cxx: "/usr/bin/clang++-13", cc: "/usr/bin/clang-13", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_clang-14", name: "Ubuntu 22.04 Clang 14", cxx: "/usr/bin/clang++-14", cc: "/usr/bin/clang-14", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_gcc-10", name: "Ubuntu 22.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_gcc-11", name: "Ubuntu 22.04 G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2004_clang-12", name: "Ubuntu 20.04 Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-20.04" }
+          - { tag: "ubuntu-2004_clang-11", name: "Ubuntu 20.04 Clang 11", cxx: "/usr/bin/clang++-11", cc: "/usr/bin/clang-11", runs-on: "ubuntu-20.04" }
+          - { tag: "ubuntu-2004_clang-10", name: "Ubuntu 20.04 Clang 10", cxx: "/usr/bin/clang++-10", cc: "/usr/bin/clang-10", runs-on: "ubuntu-20.04" }
+          - { tag: "ubuntu-2004_gcc-10", name: "Ubuntu 20.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-20.04" }
+          - { tag: "windows-2022_msvc17", name: "Windows Server 2022 MSVC 17", cxx: "", cc: "", runs-on: "windows-2022" }
+          - { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
+          - { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "g++-10", cc: "gcc-10", runs-on: "macos-11" }
+          - { tag: "macos-11_gcc-11", name: "MacOS 11 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-11" }
 #         Seems like llvm14 is no longer installed and llvm15 is present on MacOS 11 instead
 #          - { tag: "macos-11_clang-14", name: "MacOS 11 Clang 14", cxx: "/usr/local/Cellar/llvm@14/14.0.6/bin/clang++", cc: "/usr/local/Cellar/llvm@14/14.0.6/bin/clang", runs-on: "macos-11" }
           - { tag: "macos-11_clang-15", name: "MacOS 11 Clang 15", cxx: "/usr//local/Cellar/llvm/15.0.7_1/bin/clang++", cc: "/usr//local/Cellar/llvm/15.0.7_1/bin/clang", runs-on: "macos-11" }
 #         G++11 Seems to be broken on MacOS 12 and fails with a assert inside the linker, so keep it disabled for now.
 #         - { tag: "macos-12_gcc-11", name: "MacOS 12 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-12" }
-          #- { tag: "macos-12_clang-14", name: "MacOS 12 Clang 14", cxx: "", cc: "", runs-on: "macos-12" }
+          - { tag: "macos-12_clang-14", name: "MacOS 12 Clang 14", cxx: "", cc: "", runs-on: "macos-12" }
     runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
     env:
