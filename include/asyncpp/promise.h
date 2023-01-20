@@ -159,12 +159,16 @@ namespace asyncpp {
          * \param cb Callback to invoke as soon as a result is available.
          */
 		void on_result(std::function<void(TResult*, std::exception_ptr)> cb) {
-			std::unique_lock lck{m_state->m_mtx};
-			if (std::holds_alternative<std::monostate>(m_state->m_value)) {
-				m_state->m_on_result.emplace_back(std::move(cb));
+			state& s = *m_state;
+			std::unique_lock lck{s.m_mtx};
+			if (std::holds_alternative<std::monostate>(s.m_value)) {
+				s.m_on_result.emplace_back(std::move(cb));
+			} else if (std::holds_alternative<TResult>(s.m_value)) {
+				lck.unlock();
+				cb(&std::get<TResult>(s.m_value), nullptr);
 			} else {
 				lck.unlock();
-				cb();
+				cb(nullptr, std::get<std::exception_ptr>(s.m_value));
 			}
 		}
 
