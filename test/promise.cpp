@@ -2,6 +2,7 @@
 #include <asyncpp/promise.h>
 #include <asyncpp/sync_wait.h>
 #include <chrono>
+#include <exception>
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <thread>
@@ -176,4 +177,80 @@ TEST(ASYNCPP, PromiseRejectTimeout) {
 	wait_mtx.unlock();
 	ASSERT_EQ(res, nullptr);
 	ASSERT_THROW(p.get(std::chrono::milliseconds(500)), std::runtime_error);
+}
+
+TEST(ASYNCPP, PromiseCallbackFulfilled) {
+	auto p = promise<int>::make_fulfilled(42);
+	ASSERT_FALSE(p.is_pending());
+	ASSERT_TRUE(p.is_fulfilled());
+	ASSERT_FALSE(p.is_rejected());
+	bool was_called = false;
+	p.on_result([&was_called](int* res, std::exception_ptr ex) {
+		ASSERT_NE(res, nullptr);
+		ASSERT_EQ(*res, 42);
+		ASSERT_EQ(ex, nullptr);
+		was_called = true;
+	});
+	ASSERT_TRUE(was_called);
+}
+
+TEST(ASYNCPP, PromiseCallbackRejected) {
+	auto p = promise<int>::make_rejected<std::runtime_error>("");
+	ASSERT_FALSE(p.is_pending());
+	ASSERT_FALSE(p.is_fulfilled());
+	ASSERT_TRUE(p.is_rejected());
+	bool was_called = false;
+	p.on_result([&was_called](int* res, std::exception_ptr ex) {
+		ASSERT_EQ(res, nullptr);
+		ASSERT_NE(ex, nullptr);
+		try {
+			std::rethrow_exception(ex);
+		} catch (const std::runtime_error& e) {
+
+		} catch (...) { ASSERT_FALSE(true) << "Invalid exception received"; }
+		was_called = true;
+	});
+	ASSERT_TRUE(was_called);
+}
+
+TEST(ASYNCPP, PromiseCallbackFulfill) {
+	promise<int> p;
+	ASSERT_TRUE(p.is_pending());
+	ASSERT_FALSE(p.is_fulfilled());
+	ASSERT_FALSE(p.is_rejected());
+	bool was_called = false;
+	p.on_result([&was_called](int* res, std::exception_ptr ex) {
+		ASSERT_NE(res, nullptr);
+		ASSERT_EQ(*res, 42);
+		ASSERT_EQ(ex, nullptr);
+		was_called = true;
+	});
+	ASSERT_FALSE(was_called);
+	p.fulfill(42);
+	ASSERT_FALSE(p.is_pending());
+	ASSERT_TRUE(p.is_fulfilled());
+	ASSERT_FALSE(p.is_rejected());
+}
+
+TEST(ASYNCPP, PromiseCallbackReject) {
+	promise<int> p;
+	ASSERT_TRUE(p.is_pending());
+	ASSERT_FALSE(p.is_fulfilled());
+	ASSERT_FALSE(p.is_rejected());
+	bool was_called = false;
+	p.on_result([&was_called](int* res, std::exception_ptr ex) {
+		ASSERT_EQ(res, nullptr);
+		ASSERT_NE(ex, nullptr);
+		try {
+			std::rethrow_exception(ex);
+		} catch (const std::runtime_error& e) {
+
+		} catch (...) { ASSERT_FALSE(true) << "Invalid exception received"; }
+		was_called = true;
+	});
+	ASSERT_FALSE(was_called);
+	p.reject<std::runtime_error>("");
+	ASSERT_FALSE(p.is_pending());
+	ASSERT_FALSE(p.is_fulfilled());
+	ASSERT_TRUE(p.is_rejected());
 }
