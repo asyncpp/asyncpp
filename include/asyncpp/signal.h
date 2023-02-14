@@ -1,8 +1,8 @@
 #pragma once
-#include <asyncpp/ref.h>
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
@@ -11,11 +11,9 @@
 namespace asyncpp {
 	struct signal_traits_mt {
 		using mutex_type = std::mutex;
-		using ref_counter_type = thread_safe_refcount;
 	};
 	struct signal_traits_st {
 		using mutex_type = std::mutex;
-		using ref_counter_type = thread_safe_refcount;
 	};
 
 	template<typename, typename = signal_traits_mt>
@@ -23,15 +21,15 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	class signal<void(TParams...), TTraits> {
-		struct node_base : intrusive_refcount<node_base, typename TTraits::ref_counter_type> {
+		struct node_base {
 			// TODO: Replace vtable with function pointers to avoid
 			// TODO: excessive vtable generations with lambdas
 			virtual ~node_base() = default;
 			virtual void invoke(const TParams&...) = 0;
 
 			std::atomic<size_t> counter;
-			ref<node_base> next;
-			ref<node_base> previous;
+			std::shared_ptr<node_base> next;
+			std::shared_ptr<node_base> previous;
 		};
 		template<typename FN>
 		struct node final : node_base {
@@ -45,14 +43,18 @@ namespace asyncpp {
 		using traits_type = TTraits;
 
 		class handle {
-			ref<node_base> m_node;
+			std::weak_ptr<node_base> m_node;
 			friend class signal;
 
 		public:
-			handle(ref<node_base> hdl = {}) : m_node(hdl) {}
-			explicit operator bool() const noexcept { return m_node && m_node->counter != removed_counter; }
+			handle(std::weak_ptr<node_base> hdl = {}) : m_node(hdl) {}
+			explicit operator bool() const noexcept {
+				auto node = m_node.lock();
+				return node && node->counter != removed_counter;
+			}
 			void disconnect() noexcept {
-				if (m_node) m_node->counter = removed_counter;
+				auto node = m_node.lock();
+				if (node) node->counter = removed_counter;
 				m_node.reset();
 			}
 		};
@@ -85,8 +87,8 @@ namespace asyncpp {
 
 	private:
 		mutable typename TTraits::mutex_type m_mutex{};
-		mutable ref<node_base> m_head{};
-		mutable ref<node_base> m_tail{};
+		mutable std::shared_ptr<node_base> m_head{};
+		mutable std::shared_ptr<node_base> m_tail{};
 		std::atomic<size_t> m_current_counter{1};
 		static constexpr size_t removed_counter = 0;
 
@@ -106,7 +108,7 @@ namespace asyncpp {
 			return result;
 		}
 
-		void free_node(ref<node_base>& node) const noexcept {
+		void free_node(std::shared_ptr<node_base>& node) const noexcept {
 			if (node->next) { node->next->previous = node->previous; }
 			if (node->previous) { node->previous->next = node->next; }
 			node->counter = removed_counter;
@@ -169,9 +171,7 @@ namespace asyncpp {
 			return it->second(params...);
 		}
 
-		size_t operator()(event_type event, const TParams&... params) const {
-			return invoke(event, params...);
-		}
+		size_t operator()(event_type event, const TParams&... params) const { return invoke(event, params...); }
 
 		size_t shrink_to_fit() {
 			std::unique_lock lck{m_mutex};
@@ -245,7 +245,7 @@ namespace asyncpp {
 	template<typename... TParams, typename TTraits>
 	template<typename FN>
 	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::append(FN&& fn) {
-		ref<node_base> new_node(new node<FN>(std::move(fn)));
+		std::shared_ptr<node_base> new_node(new node<FN>(std::move(fn)));
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->previous = m_tail;
@@ -261,7 +261,7 @@ namespace asyncpp {
 	template<typename... TParams, typename TTraits>
 	template<typename FN>
 	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::prepend(FN&& fn) {
-		ref<node_base> new_node(new node<FN>(std::move(fn)));
+		std::shared_ptr<node_base> new_node(new node<FN>(std::move(fn)));
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->next = m_head;
@@ -276,7 +276,7 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	inline bool signal<void(TParams...), TTraits>::remove(const handle& hdl) {
-		auto node = hdl.m_node;
+		auto node = hdl.m_node.lock();
 		if (!node) return false;
 		std::lock_guard lck{m_mutex};
 		free_node(node);
@@ -285,7 +285,7 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	inline bool signal<void(TParams...), TTraits>::owns_handle(const handle& hdl) const {
-		auto node = hdl.m_node;
+		auto node = hdl.m_node.lock();
 		if (!node) return false;
 		std::lock_guard lck{m_mutex};
 		while (node->previous) {
@@ -296,7 +296,7 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	inline size_t signal<void(TParams...), TTraits>::operator()(const TParams&... params) const {
-		ref<node_base> node{};
+		std::shared_ptr<node_base> node{};
 
 		{
 			std::lock_guard lck(m_mutex);
