@@ -1,5 +1,6 @@
 #include <asyncpp/signal.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 TEST(ASYNCPP, Signal) {
 	int param = 0;
