@@ -5,9 +5,9 @@ using namespace asyncpp;
 
 namespace {
 	static bool did_destroy;
-	struct test : intrusive_refcount<> {
+	struct test : intrusive_refcount<test> {
 		~test() noexcept { did_destroy = true; }
-		using intrusive_refcount<>::use_count;
+		using intrusive_refcount::use_count;
 	};
 } // namespace
 

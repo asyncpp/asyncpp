@@ -16,7 +16,7 @@ namespace asyncpp {
      */
 	template<typename TResult>
 	class promise {
-		struct state : intrusive_refcount<> {
+		struct state : intrusive_refcount<state> {
 			std::mutex m_mtx{};
 			std::condition_variable m_cv{};
 			std::variant<std::monostate, TResult, std::exception_ptr> m_value{};

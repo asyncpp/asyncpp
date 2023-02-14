@@ -51,33 +51,15 @@ namespace asyncpp {
 	static_assert(RefCount<thread_safe_refcount>, "[INTERNAL] thread_safe_refcount does not satisfy RefCount");
 	static_assert(RefCount<thread_unsafe_refcount>, "[INTERNAL] thread_unsafe_refcount does not satisfy RefCount");
 
-	template<RefCount TCounter = thread_safe_refcount>
-	class intrusive_refcount;
-
-	namespace detail {
-		template<typename T>
-		inline void is_intrusive_refcount(const intrusive_refcount<T>&);
-	}
-
-	/**
-	 * \brief Concept to check if a class inherits from intrusive_refcount
-	 */
-	template<typename T>
-	concept IntrusiveRefCount = requires(T& a) {
-									{ detail::is_intrusive_refcount(a) };
-								};
-
 	/**
 	 * \brief Intrusive refcounting base class
+	 * \tparam T Derived type
 	 * \tparam TCounter Counter policy to use, e.g. thread_safe_refcount or thread_unsafe_refcount
 	 */
-	template<RefCount TCounter>
+	template<typename T, RefCount TCounter = thread_safe_refcount>
 	class intrusive_refcount {
-		mutable TCounter m_refcount{0};
-		template<IntrusiveRefCount T>
-		friend void refcounted_add_ref(const T*) noexcept;
-		template<IntrusiveRefCount T>
-		friend void refcounted_remove_ref(const T*) noexcept;
+	public:
+		intrusive_refcount() = default;
 
 	protected:
 		~intrusive_refcount() noexcept = default;
@@ -87,32 +69,57 @@ namespace asyncpp {
 		 */
 		size_t use_count() const noexcept { return m_refcount.count(); }
 
-	public:
-		intrusive_refcount() = default;
+		/**
+		 * \brief Increment the reference count
+		 */
+		void add_ref() const noexcept {
+			static_assert(std::is_base_of_v<intrusive_refcount<T, TCounter>, T>,
+						  "T needs to inherit intrusive_refcount<T>");
+			m_refcount.fetch_increment();
+		}
+
+		/**
+		 * \brief Decrement the reference count and delete the object if the last reference is removed.
+		 * \note This might invoke the equivalent of `delete (T*)this`. Make sure you do not access any
+		 *       member data after calling unless you hold an extra reference to it.
+		 */
+		void remove_ref() const noexcept {
+			static_assert(std::is_nothrow_destructible_v<T>, "Destructor needs to be noexcept!");
+			static_assert(std::is_base_of_v<intrusive_refcount<T, TCounter>, T>,
+						  "T needs to inherit intrusive_refcount<T>");
+			auto cnt = m_refcount.fetch_decrement();
+			if (cnt == 1) delete static_cast<const T*>(this);
+		}
+
+	private:
+		mutable TCounter m_refcount{0};
+
+		template<typename T2, RefCount T2Counter>
+		friend void refcounted_add_ref(const intrusive_refcount<T2, T2Counter>*) noexcept;
+		template<typename T2, RefCount T2Counter>
+		friend void refcounted_remove_ref(const intrusive_refcount<T2, T2Counter>*) noexcept;
 	};
 
 	/**
 	 * \brief refcounted_add_ref specialization for intrusive_refcount
 	 * \tparam T derived type
+	 * \tparam TCounter Counter policy
 	 * \param ptr The pointer to add a reference to
 	 */
-	template<IntrusiveRefCount T>
-	inline void refcounted_add_ref(const T* ptr) noexcept {
-		assert(ptr);
-		ptr->m_refcount.fetch_increment();
+	template<typename T, RefCount TCounter>
+	inline void refcounted_add_ref(const intrusive_refcount<T, TCounter>* ptr) noexcept {
+		if (ptr) ptr->add_ref();
 	}
 
 	/**
 	 * \brief refcounted_remove_ref specialization for intrusive_refcount
 	 * \tparam T derived type
+	 * \tparam TCounter Counter policy
 	 * \param ptr The pointer to remove a reference from
 	 */
-	template<IntrusiveRefCount T>
-	inline void refcounted_remove_ref(const T* ptr) noexcept {
-		static_assert(std::is_nothrow_destructible_v<T>, "Destructor needs to be noexcept!");
-		assert(ptr);
-		auto cnt = ptr->m_refcount.fetch_decrement();
-		if (cnt == 1) delete ptr;
+	template<typename T, RefCount TCounter>
+	inline void refcounted_remove_ref(const intrusive_refcount<T, TCounter>* ptr) noexcept {
+		if (ptr) ptr->remove_ref();
 	}
 
 	/**
@@ -129,7 +136,7 @@ namespace asyncpp {
 	 * \brief Reference count handle
 	 * \tparam T Type of the reference counted class
 	 */
-	template<RefCountable T>
+	template<typename T>
 	class ref {
 		T* m_ptr;
 
@@ -140,7 +147,7 @@ namespace asyncpp {
 		/**
 		 * \brief Construct an empty ref
 		 */
-		constexpr ref() noexcept : m_ptr(nullptr) {}
+		constexpr ref() noexcept : m_ptr(nullptr) { static_assert(RefCountable<T>, "T needs to be refcountable"); }
 		/**
 		 * \brief Construct a new ref object
 		 * 
@@ -148,6 +155,7 @@ namespace asyncpp {
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
 		ref(T* ptr, bool adopt_ref = false) noexcept(add_ref_noexcept) : m_ptr{ptr} {
+			static_assert(RefCountable<T>, "T needs to be refcountable");
 			if (m_ptr && !adopt_ref) refcounted_add_ref(m_ptr);
 		}
 		/// \brief Copy constructor
@@ -267,7 +275,7 @@ namespace asyncpp {
 		void unlock_with(uintptr_t val) const noexcept {
 			assert((val & lock_mask) == 0);
 			[[maybe_unused]] auto res = m_ptr.exchange(val, std::memory_order_release);
-			assert(res == (val | lock_mask));
+			assert((res & lock_mask) == lock_mask);
 		}
 
 	public:
