@@ -53,6 +53,7 @@ if(ASYNCPP_BUILD_TEST)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/ptr_tag.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/ref.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/scope_guard.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/signal.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/task.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/thread_pool.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/timer.cpp)
