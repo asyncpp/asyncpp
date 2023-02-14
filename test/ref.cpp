@@ -55,3 +55,43 @@ TEST(ASYNCPP, RefCountedNoexcept) {
 	static_assert(ref<test>::add_ref_noexcept);
 	static_assert(ref<test>::remove_ref_noexcept);
 }
+
+TEST(ASYNCPP, AtomicRefCounted) {
+	did_destroy = false;
+	atomic_ref hdl{ref(new test())};
+	ASSERT_TRUE(hdl.load());
+	ASSERT_EQ(hdl->use_count(), 2);
+	atomic_ref hdl2{ref(new test())};
+	ASSERT_TRUE(hdl2.load());
+	ASSERT_EQ(hdl2->use_count(), 2);
+	ASSERT_NE(hdl.load(), hdl2.load());
+	hdl.store(hdl2);
+	ASSERT_TRUE(hdl.load());
+	ASSERT_TRUE(hdl2);
+	ASSERT_TRUE(did_destroy);
+	did_destroy = false;
+	ASSERT_EQ(hdl->use_count(), 3);
+	ASSERT_EQ(hdl, hdl2);
+	hdl.reset();
+	ASSERT_FALSE(hdl.load());
+	ASSERT_TRUE(hdl2);
+	ASSERT_FALSE(did_destroy);
+
+	ASSERT_EQ(hdl2.load(), hdl2.operator->());
+
+	hdl2.reset();
+	ASSERT_FALSE(hdl2.load());
+	ASSERT_TRUE(did_destroy);
+	did_destroy = false;
+
+	hdl = ref{new test()};
+	ASSERT_TRUE(hdl);
+	ASSERT_EQ(hdl->use_count(), 2);
+	auto ptr = hdl.release();
+	ASSERT_FALSE(did_destroy);
+	ASSERT_FALSE(hdl.load());
+	ASSERT_NE(ptr, nullptr);
+	ASSERT_EQ(ptr->use_count(), 1);
+	delete ptr;
+	ASSERT_TRUE(did_destroy);
+}
