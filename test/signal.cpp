@@ -38,6 +38,41 @@ TEST(ASYNCPP, SignalDisconnect) {
 	ASSERT_EQ(param, 42);
 }
 
+TEST(ASYNCPP, SignalOwnsHandle) {
+	asyncpp::signal<void()> sig;
+	ASSERT_FALSE(sig.owns_handle(asyncpp::signal_handle()));
+	auto con = sig += []() { };
+	ASSERT_TRUE(sig.owns_handle(con));
+	ASSERT_FALSE(sig.empty());
+	sig.remove(con);
+	ASSERT_FALSE(sig.owns_handle(con));
+	ASSERT_TRUE(sig.empty());
+	con = sig += []() { };
+	ASSERT_TRUE(sig.owns_handle(con));
+	ASSERT_FALSE(sig.empty());
+	con.disconnect();
+	ASSERT_FALSE(sig.owns_handle(con));
+	ASSERT_TRUE(sig.empty());
+}
+
+TEST(ASYNCPP, SignalHandleEquals) {
+	asyncpp::signal<void()> sig;
+	auto con = sig += []() { };
+	auto con2 = sig += [](){};
+	auto con3 = con;
+	ASSERT_NE(con, con2);
+	ASSERT_EQ(con, con3);
+	ASSERT_NE(con2, con3);
+	con3 = con2;
+	ASSERT_NE(con, con2);
+	ASSERT_NE(con, con3);
+	ASSERT_EQ(con2, con3);
+	con2.disconnect();
+	ASSERT_NE(con, con2);
+	ASSERT_NE(con, con3);
+	ASSERT_NE(con2, con3);
+}
+
 TEST(ASYNCPP, SignalRecursiveCall) {
 	int param = 0;
 

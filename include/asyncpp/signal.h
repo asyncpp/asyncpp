@@ -35,10 +35,22 @@ namespace asyncpp {
 
 	public:
 		signal_handle(ref<detail::signal_node_base> hdl = {}) : m_node(hdl) {}
-		explicit operator bool() const noexcept { return m_node && m_node->counter != detail::signal_removed_counter; }
+		explicit operator bool() const noexcept { return valid(); }
+		bool operator!() const noexcept { return !valid(); }
+		bool valid() const noexcept { return m_node && m_node->counter != detail::signal_removed_counter; }
 		void disconnect() noexcept {
 			if (m_node) m_node->counter = detail::signal_removed_counter;
 			m_node.reset();
+		}
+
+		friend inline constexpr auto operator<=>(const signal_handle& lhs, const signal_handle& rhs) noexcept {
+			return lhs.m_node.get() <=> rhs.m_node.get();
+		}
+		friend inline constexpr auto operator==(const signal_handle& lhs, const signal_handle& rhs) noexcept {
+			return lhs.m_node.get() == rhs.m_node.get();
+		}
+		friend inline constexpr auto operator!=(const signal_handle& lhs, const signal_handle& rhs) noexcept {
+			return lhs.m_node.get() != rhs.m_node.get();
 		}
 	};
 
@@ -48,8 +60,8 @@ namespace asyncpp {
 			virtual ~node() noexcept = default;
 			virtual void invoke(const TParams&...) = 0;
 
-			ref<node> next;
-			ref<node> previous;
+			ref<node> next{};
+			node* previous{};
 		};
 		template<typename FN>
 		struct node_impl final : node {
@@ -70,7 +82,8 @@ namespace asyncpp {
 		signal& operator=(const signal&) = delete;
 		signal& operator=(signal&&);
 
-		bool empty() const noexcept { return m_head != nullptr; }
+		size_t size() const noexcept;
+		bool empty() const noexcept { return size() == 0; }
 
 		template<typename FN>
 		handle append(FN&& fn);
@@ -92,7 +105,7 @@ namespace asyncpp {
 	private:
 		mutable typename TTraits::mutex_type m_mutex{};
 		mutable ref<node> m_head{};
-		mutable ref<node> m_tail{};
+		mutable node* m_tail{};
 		std::atomic<size_t> m_current_counter{1};
 
 		size_t get_next_counter() {
@@ -222,7 +235,7 @@ namespace asyncpp {
 		m_head.reset();
 		while (node) {
 			auto next = node->next;
-			node->previous.reset();
+			node->previous = nullptr;
 			node->next.reset();
 			node = next;
 		}
@@ -238,11 +251,23 @@ namespace asyncpp {
 		m_head.reset();
 		while (node) {
 			auto next = node->next;
-			node->previous.reset();
+			node->previous = nullptr;
 			node->next.reset();
 			node = next;
 		}
 		assert(!node);
+	}
+
+	template<typename... TParams, typename TTraits>
+	inline size_t signal<void(TParams...), TTraits>::size() const noexcept {
+		std::lock_guard lck{m_mutex};
+		auto node = m_head;
+		size_t res = 0;
+		while (node) {
+			if (node->counter != detail::signal_removed_counter) res++;
+			node = node->next;
+		}
+		return res;
 	}
 
 	template<typename... TParams, typename TTraits>
@@ -253,10 +278,10 @@ namespace asyncpp {
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->previous = m_tail;
 			m_tail->next = new_node;
-			m_tail = new_node;
+			m_tail = new_node.get();
 		} else {
 			m_head = new_node;
-			m_tail = new_node;
+			m_tail = new_node.get();
 		}
 		return handle(static_ref_cast<detail::signal_node_base>(new_node));
 	}
@@ -268,7 +293,7 @@ namespace asyncpp {
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->next = m_head;
-			m_head->previous = new_node;
+			m_head->previous = new_node.get();
 			m_head = new_node;
 		} else {
 			m_head = new_node;
@@ -289,12 +314,13 @@ namespace asyncpp {
 	template<typename... TParams, typename TTraits>
 	inline bool signal<void(TParams...), TTraits>::owns_handle(const handle& hdl) const {
 		auto node = static_ref_cast<signal::node>(hdl.m_node);
-		if (!node) return false;
+		if (!node || node->counter == detail::signal_removed_counter) return false;
 		std::lock_guard lck{m_mutex};
-		while (node->previous) {
-			node = node->previous;
+		auto h = m_head;
+		while (h && h != node) {
+			h = h->next;
 		}
-		return node == m_head;
+		return node == h;
 	}
 
 	template<typename... TParams, typename TTraits>
