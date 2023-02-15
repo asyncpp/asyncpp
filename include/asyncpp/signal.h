@@ -1,4 +1,5 @@
 #pragma once
+#include <asyncpp/ref.h>
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -19,45 +20,48 @@ namespace asyncpp {
 	template<typename, typename = signal_traits_mt>
 	class signal;
 
+	namespace detail {
+		struct signal_node_base : intrusive_refcount<signal_node_base> {
+			virtual ~signal_node_base() noexcept = default;
+			std::atomic<size_t> counter;
+		};
+		static constexpr size_t signal_removed_counter = 0;
+	} // namespace detail
+
+	class signal_handle {
+		ref<detail::signal_node_base> m_node;
+		template<typename, typename>
+		friend class signal;
+
+	public:
+		signal_handle(ref<detail::signal_node_base> hdl = {}) : m_node(hdl) {}
+		explicit operator bool() const noexcept { return m_node && m_node->counter != detail::signal_removed_counter; }
+		void disconnect() noexcept {
+			if (m_node) m_node->counter = detail::signal_removed_counter;
+			m_node.reset();
+		}
+	};
+
 	template<typename... TParams, typename TTraits>
 	class signal<void(TParams...), TTraits> {
-		struct node_base {
-			// TODO: Replace vtable with function pointers to avoid
-			// TODO: excessive vtable generations with lambdas
-			virtual ~node_base() = default;
+		struct node : detail::signal_node_base {
+			virtual ~node() noexcept = default;
 			virtual void invoke(const TParams&...) = 0;
 
-			std::atomic<size_t> counter;
-			std::shared_ptr<node_base> next;
-			std::shared_ptr<node_base> previous;
+			ref<node> next;
+			ref<node> previous;
 		};
 		template<typename FN>
-		struct node final : node_base {
-			virtual ~node() = default;
+		struct node_impl final : node {
+			virtual ~node_impl() noexcept = default;
 			virtual void invoke(const TParams&... params) override { m_fn(params...); }
 			[[no_unique_address]] FN m_fn;
-			node(FN&& fn) : m_fn(std::move(fn)) {}
+			node_impl(FN&& fn) : m_fn(std::move(fn)) {}
 		};
 
 	public:
 		using traits_type = TTraits;
-
-		class handle {
-			std::weak_ptr<node_base> m_node;
-			friend class signal;
-
-		public:
-			handle(std::weak_ptr<node_base> hdl = {}) : m_node(hdl) {}
-			explicit operator bool() const noexcept {
-				auto node = m_node.lock();
-				return node && node->counter != removed_counter;
-			}
-			void disconnect() noexcept {
-				auto node = m_node.lock();
-				if (node) node->counter = removed_counter;
-				m_node.reset();
-			}
-		};
+		using handle = signal_handle;
 
 		signal() {}
 		~signal();
@@ -87,10 +91,9 @@ namespace asyncpp {
 
 	private:
 		mutable typename TTraits::mutex_type m_mutex{};
-		mutable std::shared_ptr<node_base> m_head{};
-		mutable std::shared_ptr<node_base> m_tail{};
+		mutable ref<node> m_head{};
+		mutable ref<node> m_tail{};
 		std::atomic<size_t> m_current_counter{1};
-		static constexpr size_t removed_counter = 0;
 
 		size_t get_next_counter() {
 			const auto result = m_current_counter.fetch_add(1, std::memory_order::seq_cst);
@@ -108,10 +111,10 @@ namespace asyncpp {
 			return result;
 		}
 
-		void free_node(std::shared_ptr<node_base>& node) const noexcept {
+		void free_node(ref<node>& node) const noexcept {
 			if (node->next) { node->next->previous = node->previous; }
 			if (node->previous) { node->previous->next = node->next; }
-			node->counter = removed_counter;
+			node->counter = detail::signal_removed_counter;
 			if (m_head == node) m_head = node->next;
 			if (m_tail == node) m_tail = node->previous;
 		}
@@ -245,7 +248,7 @@ namespace asyncpp {
 	template<typename... TParams, typename TTraits>
 	template<typename FN>
 	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::append(FN&& fn) {
-		std::shared_ptr<node_base> new_node(new node<FN>(std::move(fn)));
+		ref<node> new_node(new node_impl<FN>(std::move(fn)));
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->previous = m_tail;
@@ -255,13 +258,13 @@ namespace asyncpp {
 			m_head = new_node;
 			m_tail = new_node;
 		}
-		return handle(new_node);
+		return handle(static_ref_cast<detail::signal_node_base>(new_node));
 	}
 
 	template<typename... TParams, typename TTraits>
 	template<typename FN>
 	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::prepend(FN&& fn) {
-		std::shared_ptr<node_base> new_node(new node<FN>(std::move(fn)));
+		ref<node> new_node(new node_impl<FN>(std::move(fn)));
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->next = m_head;
@@ -271,12 +274,12 @@ namespace asyncpp {
 			m_head = new_node;
 			m_tail = new_node;
 		}
-		return handle(new_node);
+		return handle(static_ref_cast<detail::signal_node_base>(new_node));
 	}
 
 	template<typename... TParams, typename TTraits>
 	inline bool signal<void(TParams...), TTraits>::remove(const handle& hdl) {
-		auto node = hdl.m_node.lock();
+		auto node = static_ref_cast<signal::node>(hdl.m_node);
 		if (!node) return false;
 		std::lock_guard lck{m_mutex};
 		free_node(node);
@@ -285,7 +288,7 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	inline bool signal<void(TParams...), TTraits>::owns_handle(const handle& hdl) const {
-		auto node = hdl.m_node.lock();
+		auto node = static_ref_cast<signal::node>(hdl.m_node);
 		if (!node) return false;
 		std::lock_guard lck{m_mutex};
 		while (node->previous) {
@@ -296,7 +299,7 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	inline size_t signal<void(TParams...), TTraits>::operator()(const TParams&... params) const {
-		std::shared_ptr<node_base> node{};
+		ref<node> node{};
 
 		{
 			std::lock_guard lck(m_mutex);
@@ -308,13 +311,13 @@ namespace asyncpp {
 
 		const auto counter = m_current_counter.load(std::memory_order_acquire);
 		do {
-			if (node->counter != removed_counter && counter >= node->counter) {
+			if (node->counter != detail::signal_removed_counter && counter >= node->counter) {
 				node->invoke(params...);
 				++ninvoked;
 			}
 
 			std::lock_guard lck(m_mutex);
-			if (node->counter == removed_counter) { free_node(node); }
+			if (node->counter == detail::signal_removed_counter) { free_node(node); }
 			node = node->next;
 		} while (node);
 		return ninvoked;

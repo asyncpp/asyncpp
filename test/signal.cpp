@@ -6,9 +6,7 @@ TEST(ASYNCPP, Signal) {
 	int param = 0;
 
 	asyncpp::signal<void(int)> sig;
-	auto con = sig += [&](int val) {
-		param = val;
-	};
+	auto con = sig += [&](int val) { param = val; };
 
 	ASSERT_EQ(sig(42), 1);
 	ASSERT_EQ(param, 42);
@@ -18,9 +16,7 @@ TEST(ASYNCPP, SignalConnectionDisconnect) {
 	int param = 0;
 
 	asyncpp::signal<void(int)> sig;
-	auto con = sig += [&](int val) {
-		param = val;
-	};
+	auto con = sig += [&](int val) { param = val; };
 	sig.remove(con);
 
 	ASSERT_EQ(sig(42), 0);
@@ -31,9 +27,7 @@ TEST(ASYNCPP, SignalDisconnect) {
 	int param = 0;
 
 	asyncpp::signal<void(int)> sig;
-	auto con = sig += [&](int val) {
-		param = val;
-	};
+	auto con = sig += [&](int val) { param = val; };
 
 	ASSERT_EQ(sig(42), 1);
 	ASSERT_EQ(param, 42);
@@ -61,7 +55,7 @@ TEST(ASYNCPP, SignalRecursiveCallDisconnectSelf) {
 	int param = 0;
 
 	asyncpp::signal<void(int)> sig;
-	asyncpp::signal<void(int)>::handle con;
+	asyncpp::signal_handle con;
 	con = sig += [&](int val) {
 		param = val;
 		sig.remove(con);
@@ -86,12 +80,10 @@ TEST(ASYNCPP, SignalThreadedRemove) {
 	int param = 0;
 
 	asyncpp::signal<void(int)> sig;
-	asyncpp::signal<void(int)>::handle con;
+	asyncpp::signal_handle con;
 	con = sig += [&](int val) {
 		param = val;
-		std::thread th([&](){
-			sig.remove(con);
-		});
+		std::thread th([&]() { sig.remove(con); });
 		th.join();
 		if (val == 42) sig(41);
 	};
@@ -102,12 +94,10 @@ TEST(ASYNCPP, SignalThreadedRemove) {
 
 TEST(ASYNCPP, SignalManager) {
 	asyncpp::signal_manager<int, void(int)> mgr;
-	
+
 	int param = 0;
 
-	auto hdl = mgr.append(10, [&param](int x){
-		param = x;
-	});
+	auto hdl = mgr.append(10, [&param](int x) { param = x; });
 	ASSERT_TRUE(hdl);
 	ASSERT_TRUE(mgr.owns_handle(10, hdl));
 	ASSERT_FALSE(mgr.owns_handle(11, hdl));
@@ -122,9 +112,7 @@ TEST(ASYNCPP, SignalManager) {
 	ASSERT_EQ(mgr(10, 43), 0);
 	ASSERT_EQ(param, 42);
 
-	hdl = mgr.append(10, [&param](int x){
-		param = x;
-	});
+	hdl = mgr.append(10, [&param](int x) { param = x; });
 
 	ASSERT_EQ(mgr(10, 41), 1);
 	ASSERT_EQ(param, 41);
