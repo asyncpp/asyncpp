@@ -66,28 +66,25 @@ namespace asyncpp {
 	public:
 		scoped_signal_handle(ref<detail::signal_node_base> hdl = {}) : m_handle(hdl) {}
 		scoped_signal_handle(signal_handle hdl) : m_handle(std::move(hdl)) {}
-		~scoped_signal_handle() noexcept {
-			m_handle.disconnect();
-		}
+		~scoped_signal_handle() noexcept { m_handle.disconnect(); }
 		explicit operator bool() const noexcept { return valid(); }
 		bool operator!() const noexcept { return !valid(); }
 		bool valid() const noexcept { return m_handle.valid(); }
-		void disconnect() noexcept {
-			m_handle.disconnect();
-		}
-		void release() noexcept {
-			m_handle = {};
-		}
+		void disconnect() noexcept { m_handle.disconnect(); }
+		void release() noexcept { m_handle = {}; }
 		constexpr operator signal_handle&() noexcept { return m_handle; }
 		constexpr operator const signal_handle&() const noexcept { return m_handle; }
 
-		friend inline constexpr auto operator<=>(const scoped_signal_handle& lhs, const scoped_signal_handle& rhs) noexcept {
+		friend inline constexpr auto operator<=>(const scoped_signal_handle& lhs,
+												 const scoped_signal_handle& rhs) noexcept {
 			return lhs.m_handle <=> rhs.m_handle;
 		}
-		friend inline constexpr auto operator==(const scoped_signal_handle& lhs, const scoped_signal_handle& rhs) noexcept {
+		friend inline constexpr auto operator==(const scoped_signal_handle& lhs,
+												const scoped_signal_handle& rhs) noexcept {
 			return lhs.m_handle == rhs.m_handle;
 		}
-		friend inline constexpr auto operator!=(const scoped_signal_handle& lhs, const scoped_signal_handle& rhs) noexcept {
+		friend inline constexpr auto operator!=(const scoped_signal_handle& lhs,
+												const scoped_signal_handle& rhs) noexcept {
 			return lhs.m_handle != rhs.m_handle;
 		}
 	};

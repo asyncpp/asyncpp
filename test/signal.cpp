@@ -41,13 +41,13 @@ TEST(ASYNCPP, SignalDisconnect) {
 TEST(ASYNCPP, SignalOwnsHandle) {
 	asyncpp::signal<void()> sig;
 	ASSERT_FALSE(sig.owns_handle(asyncpp::signal_handle()));
-	auto con = sig += []() { };
+	auto con = sig += []() {};
 	ASSERT_TRUE(sig.owns_handle(con));
 	ASSERT_FALSE(sig.empty());
 	sig.remove(con);
 	ASSERT_FALSE(sig.owns_handle(con));
 	ASSERT_TRUE(sig.empty());
-	con = sig += []() { };
+	con = sig += []() {};
 	ASSERT_TRUE(sig.owns_handle(con));
 	ASSERT_FALSE(sig.empty());
 	con.disconnect();
@@ -57,8 +57,8 @@ TEST(ASYNCPP, SignalOwnsHandle) {
 
 TEST(ASYNCPP, SignalHandleEquals) {
 	asyncpp::signal<void()> sig;
-	auto con = sig += []() { };
-	auto con2 = sig += [](){};
+	auto con = sig += []() {};
+	auto con2 = sig += []() {};
 	auto con3 = con;
 	ASSERT_NE(con, con2);
 	ASSERT_EQ(con, con3);
@@ -76,13 +76,13 @@ TEST(ASYNCPP, SignalHandleEquals) {
 TEST(ASYNCPP, SignalScopedSignalHandle) {
 	asyncpp::signal<void()> sig;
 	{
-		asyncpp::scoped_signal_handle con = sig += []() { };
+		asyncpp::scoped_signal_handle con = sig += []() {};
 		ASSERT_TRUE(sig.owns_handle(con));
 		ASSERT_FALSE(sig.empty());
 	}
 	ASSERT_TRUE(sig.empty());
 	{
-		asyncpp::scoped_signal_handle con = sig += []() { };
+		asyncpp::scoped_signal_handle con = sig += []() {};
 		ASSERT_TRUE(sig.owns_handle(con));
 		ASSERT_FALSE(sig.empty());
 		con.release();
