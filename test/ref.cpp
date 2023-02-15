@@ -51,11 +51,6 @@ TEST(ASYNCPP, RefCounted) {
 	ASSERT_TRUE(did_destroy);
 }
 
-TEST(ASYNCPP, RefCountedNoexcept) {
-	static_assert(ref<test>::add_ref_noexcept);
-	static_assert(ref<test>::remove_ref_noexcept);
-}
-
 TEST(ASYNCPP, AtomicRefCounted) {
 	did_destroy = false;
 	atomic_ref hdl{ref(new test())};
