@@ -3,7 +3,6 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
-#include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
@@ -12,9 +11,16 @@
 namespace asyncpp {
 	struct signal_traits_mt {
 		using mutex_type = std::mutex;
+		using refcount_type = thread_safe_refcount;
 	};
 	struct signal_traits_st {
-		using mutex_type = std::mutex;
+		struct noop_mutex {
+			constexpr void lock() noexcept {}
+			constexpr void unlock() noexcept {}
+			constexpr bool try_lock() noexcept { return true; }
+		};
+		using mutex_type = noop_mutex;
+		using refcount_type = thread_unsafe_refcount;
 	};
 
 	template<typename, typename = signal_traits_mt>
@@ -51,6 +57,38 @@ namespace asyncpp {
 		}
 		friend inline constexpr auto operator!=(const signal_handle& lhs, const signal_handle& rhs) noexcept {
 			return lhs.m_node.get() != rhs.m_node.get();
+		}
+	};
+
+	class scoped_signal_handle {
+		signal_handle m_handle;
+
+	public:
+		scoped_signal_handle(ref<detail::signal_node_base> hdl = {}) : m_handle(hdl) {}
+		scoped_signal_handle(signal_handle hdl) : m_handle(std::move(hdl)) {}
+		~scoped_signal_handle() noexcept {
+			m_handle.disconnect();
+		}
+		explicit operator bool() const noexcept { return valid(); }
+		bool operator!() const noexcept { return !valid(); }
+		bool valid() const noexcept { return m_handle.valid(); }
+		void disconnect() noexcept {
+			m_handle.disconnect();
+		}
+		void release() noexcept {
+			m_handle = {};
+		}
+		constexpr operator signal_handle&() noexcept { return m_handle; }
+		constexpr operator const signal_handle&() const noexcept { return m_handle; }
+
+		friend inline constexpr auto operator<=>(const scoped_signal_handle& lhs, const scoped_signal_handle& rhs) noexcept {
+			return lhs.m_handle <=> rhs.m_handle;
+		}
+		friend inline constexpr auto operator==(const scoped_signal_handle& lhs, const scoped_signal_handle& rhs) noexcept {
+			return lhs.m_handle == rhs.m_handle;
+		}
+		friend inline constexpr auto operator!=(const scoped_signal_handle& lhs, const scoped_signal_handle& rhs) noexcept {
+			return lhs.m_handle != rhs.m_handle;
 		}
 	};
 

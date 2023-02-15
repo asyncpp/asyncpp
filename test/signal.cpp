@@ -73,6 +73,23 @@ TEST(ASYNCPP, SignalHandleEquals) {
 	ASSERT_NE(con2, con3);
 }
 
+TEST(ASYNCPP, SignalScopedSignalHandle) {
+	asyncpp::signal<void()> sig;
+	{
+		asyncpp::scoped_signal_handle con = sig += []() { };
+		ASSERT_TRUE(sig.owns_handle(con));
+		ASSERT_FALSE(sig.empty());
+	}
+	ASSERT_TRUE(sig.empty());
+	{
+		asyncpp::scoped_signal_handle con = sig += []() { };
+		ASSERT_TRUE(sig.owns_handle(con));
+		ASSERT_FALSE(sig.empty());
+		con.release();
+	}
+	ASSERT_FALSE(sig.empty());
+}
+
 TEST(ASYNCPP, SignalRecursiveCall) {
 	int param = 0;
 
@@ -156,4 +173,9 @@ TEST(ASYNCPP, SignalManager) {
 
 	ASSERT_EQ(mgr(10, 43), 0);
 	ASSERT_EQ(param, 41);
+}
+
+TEST(ASYNCPP, SignalExplicitThreading) {
+	asyncpp::signal_mt<void()> sigmt;
+	asyncpp::signal_st<void()> sigst;
 }
