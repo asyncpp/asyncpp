@@ -24,12 +24,10 @@ jobs:
           - { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
           - { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "g++-10", cc: "gcc-10", runs-on: "macos-11" }
           - { tag: "macos-11_gcc-11", name: "MacOS 11 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-11" }
-#         Seems like llvm14 is no longer installed and llvm15 is present on MacOS 11 instead
-#          - { tag: "macos-11_clang-14", name: "MacOS 11 Clang 14", cxx: "/usr/local/Cellar/llvm@14/14.0.6/bin/clang++", cc: "/usr/local/Cellar/llvm@14/14.0.6/bin/clang", runs-on: "macos-11" }
-          - { tag: "macos-11_clang-15", name: "MacOS 11 Clang 15", cxx: "/usr//local/Cellar/llvm/15.0.7_1/bin/clang++", cc: "/usr//local/Cellar/llvm/15.0.7_1/bin/clang", runs-on: "macos-11" }
+          - { tag: "macos-11_clang-15", name: "MacOS 11 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-11" }
 #         G++11 Seems to be broken on MacOS 12 and fails with a assert inside the linker, so keep it disabled for now.
 #         - { tag: "macos-12_gcc-11", name: "MacOS 12 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-12" }
-          - { tag: "macos-12_clang-14", name: "MacOS 12 Clang 14", cxx: "", cc: "", runs-on: "macos-12" }
+          - { tag: "macos-12_clang-15", name: "MacOS 12 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-12" }
     runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
     env:
@@ -54,7 +52,7 @@ jobs:
       macos-11_clang-14: ${{ steps.status.outputs.macos-11_clang-14 }}
       macos-11_clang-15: ${{ steps.status.outputs.macos-11_clang-15 }}
       macos-12_gcc-11: ${{ steps.status.outputs.macos-12_gcc-11 }}
-      macos-12_clang-14: ${{ steps.status.outputs.macos-12_clang-14 }}
+      macos-12_clang-15: ${{ steps.status.outputs.macos-12_clang-15 }}
     defaults:
       run:
         shell: bash -l {0}
@@ -83,7 +81,7 @@ jobs:
         run: echo "${{ matrix.compiler.tag }}=${{ job.status }}" >> $GITHUB_OUTPUT
 
   badge-upload:
-    if:  ${{ github.event_name == 'push' && always() }}
+    if:  ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && always() }}
     needs: [build]
     runs-on: ubuntu-20.04
     name: Publish badges
