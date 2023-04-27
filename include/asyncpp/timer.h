@@ -5,10 +5,11 @@
 #include <cassert>
 #include <chrono>
 #include <condition_variable>
-#include <deque>
-#include <map>
 #include <mutex>
+#include <optional>
 #include <queue>
+#include <set>
+#include <stop_token>
 #include <thread>
 
 namespace asyncpp {
@@ -16,14 +17,44 @@ namespace asyncpp {
 	 * \brief A basic thread pool implementation for usage as a dispatcher
 	 */
 	class timer : public dispatcher {
+		struct scheduled_entry {
+			std::chrono::steady_clock::time_point timepoint;
+			std::function<void(bool)> invokable;
+
+			scheduled_entry(std::chrono::steady_clock::time_point tp, std::function<void(bool)> cb) noexcept
+				: timepoint(tp), invokable(std::move(cb)) {}
+
+			struct time_less {
+				constexpr bool operator()(const scheduled_entry& lhs, const scheduled_entry& rhs) const noexcept {
+					return lhs.timepoint < rhs.timepoint;
+				}
+			};
+		};
+		struct cancellable_scheduled_entry : public scheduled_entry {
+			struct cancel_callback {
+				timer* parent;
+				std::multiset<cancellable_scheduled_entry, scheduled_entry::time_less>::const_iterator it;
+				void operator()() {
+					std::unique_lock lck{parent->m_mtx, std::defer_lock};
+					if (parent->m_thread.get_id() != std::this_thread::get_id()) lck.lock();
+					auto e = parent->m_scheduled_cancellable_set.extract(it);
+					lck.unlock();
+					if (e.value().invokable) e.value().invokable(false);
+				}
+			};
+			mutable std::optional<std::stop_callback<cancel_callback>> cancel_token;
+
+			cancellable_scheduled_entry(std::chrono::steady_clock::time_point tp, std::function<void(bool)> cb) noexcept
+				: scheduled_entry{tp, std::move(cb)} {}
+		};
+
 	public:
 		/**
-		 * \brief Construct a new thread pool
-		 * \param initial_size The initial number of threads to spawn
+		 * \brief Construct a new timer
 		 */
 		timer()
-			: m_mtx{}, m_cv{}, m_pushed{}, m_scheduled{}, m_exit{false}, //
-			  m_thread{[this]() noexcept { this->run(); }}				 //
+			: m_mtx{}, m_cv{}, m_pushed{}, m_scheduled_set{}, m_scheduled_cancellable_set{}, m_exit{false}, //
+			  m_thread{[this]() noexcept { this->run(); }}													//
 		{}
 		~timer() {
 			{
@@ -33,7 +64,8 @@ namespace asyncpp {
 			}
 			if (m_thread.joinable()) m_thread.join();
 			assert(m_pushed.empty());
-			assert(m_scheduled.empty());
+			assert(m_scheduled_set.empty());
+			assert(m_scheduled_cancellable_set.empty());
 		}
 		timer(const timer&) = delete;
 		timer& operator=(const timer&) = delete;
@@ -52,10 +84,10 @@ namespace asyncpp {
 		void schedule(std::function<void(bool)> fn, std::chrono::steady_clock::time_point timeout) {
 			if (m_exit) throw std::logic_error("shutting down");
 			if (m_thread.get_id() == std::this_thread::get_id()) {
-				m_scheduled.emplace(timeout, std::move(fn));
+				m_scheduled_set.emplace(timeout, std::move(fn));
 			} else {
 				std::unique_lock<std::mutex> lck(m_mtx);
-				m_scheduled.emplace(timeout, std::move(fn));
+				m_scheduled_set.emplace(timeout, std::move(fn));
 				m_cv.notify_all();
 				lck.unlock();
 			}
@@ -66,6 +98,28 @@ namespace asyncpp {
 		template<typename Clock, typename Duration>
 		void schedule(std::function<void(bool)> fn, std::chrono::time_point<Clock, Duration> timeout) {
 			schedule(std::move(fn), timeout - Clock::now());
+		}
+
+		void schedule(std::function<void(bool)> fn, std::chrono::steady_clock::time_point timeout, std::stop_token st) {
+			if (m_exit) throw std::logic_error("shutting down");
+			if (m_thread.get_id() == std::this_thread::get_id()) {
+				auto it = m_scheduled_cancellable_set.emplace(timeout, std::move(fn));
+				it->cancel_token.emplace(std::move(st), cancellable_scheduled_entry::cancel_callback{this, it});
+			} else {
+				std::unique_lock<std::mutex> lck(m_mtx);
+				auto it = m_scheduled_cancellable_set.emplace(timeout, std::move(fn));
+				it->cancel_token.emplace(std::move(st), cancellable_scheduled_entry::cancel_callback{this, it});
+				m_cv.notify_all();
+				lck.unlock();
+			}
+		}
+		void schedule(std::function<void(bool)> fn, std::chrono::nanoseconds timeout, std::stop_token st) {
+			schedule(std::move(fn), std::chrono::steady_clock::now() + timeout, std::move(st));
+		}
+		template<typename Clock, typename Duration>
+		void schedule(std::function<void(bool)> fn, std::chrono::time_point<Clock, Duration> timeout,
+					  std::stop_token st) {
+			schedule(std::move(fn), timeout - Clock::now(), std::move(st));
 		}
 
 		auto wait(std::chrono::steady_clock::time_point timeout) noexcept {
@@ -97,6 +151,36 @@ namespace asyncpp {
 			return wait(timeout - Clock::now());
 		}
 
+		auto wait(std::chrono::steady_clock::time_point timeout, std::stop_token st) noexcept {
+			struct awaiter {
+				timer* const m_parent;
+				const std::chrono::steady_clock::time_point m_timeout;
+				std::stop_token m_stoptoken;
+				bool m_result;
+				awaiter(timer* t, std::chrono::steady_clock::time_point timeout, std::stop_token st) noexcept
+					: m_parent(t), m_timeout(timeout), m_stoptoken(std::move(st)) {}
+
+				bool await_ready() const noexcept { return std::chrono::steady_clock::now() >= m_timeout; }
+				void await_suspend(coroutine_handle<> h) {
+					m_parent->schedule(
+						[this, h](bool res) mutable {
+							m_result = res;
+							h.resume();
+						},
+						m_timeout, std::move(m_stoptoken));
+				}
+				constexpr bool await_resume() const noexcept { return m_result; }
+			};
+			return awaiter{this, timeout, std::move(st)};
+		}
+		auto wait(std::chrono::nanoseconds timeout, std::stop_token st) noexcept {
+			return wait(std::chrono::steady_clock::now() + timeout, std::move(st));
+		}
+		template<typename Clock, typename Duration>
+		auto wait(std::chrono::time_point<Clock, Duration> timeout, std::stop_token st) {
+			return wait(timeout - Clock::now(), std::move(st));
+		}
+
 		static timer& get_default() {
 			static timer instance;
 			return instance;
@@ -106,7 +190,8 @@ namespace asyncpp {
 		std::mutex m_mtx;
 		std::condition_variable m_cv;
 		std::queue<std::function<void()>> m_pushed;
-		std::multimap<std::chrono::steady_clock::time_point, std::function<void(bool)>> m_scheduled;
+		std::multiset<scheduled_entry, scheduled_entry::time_less> m_scheduled_set;
+		std::multiset<cancellable_scheduled_entry, scheduled_entry::time_less> m_scheduled_cancellable_set;
 		std::atomic<bool> m_exit;
 		std::thread m_thread;
 
@@ -124,41 +209,62 @@ namespace asyncpp {
 						lck.lock();
 					}
 				}
-				std::chrono::nanoseconds timeout{500 * 1000 * 1000};
 				auto now = std::chrono::steady_clock::now();
-				while (!m_scheduled.empty()) {
-					auto elem = m_scheduled.begin();
-					auto diff = std::chrono::duration_cast<std::chrono::nanoseconds>(elem->first - now);
-					if (diff.count() > 0) {
-						if (timeout > diff) timeout = diff;
-						break;
-					}
-					auto cb = std::move(elem->second);
-					m_scheduled.erase(elem);
-					if (cb) {
+				while (!m_scheduled_set.empty()) {
+					auto elem = m_scheduled_set.begin();
+					if (elem->timepoint > now) break;
+					auto handle = m_scheduled_set.extract(elem);
+					if (handle.value().invokable) {
 						lck.unlock();
 						try {
-							cb(true);
+							handle.value().invokable(true);
 						} catch (...) {}
 						lck.lock();
 					}
 				}
-				if (m_pushed.empty() && (m_scheduled.empty() || m_scheduled.begin()->first > now)) {
+				while (!m_scheduled_cancellable_set.empty()) {
+					auto elem = m_scheduled_cancellable_set.begin();
+					if (elem->timepoint > now) break;
+					auto handle = m_scheduled_cancellable_set.extract(elem);
+					if (handle.value().invokable) {
+						handle.value().cancel_token.reset();
+						lck.unlock();
+						try {
+							handle.value().invokable(true);
+						} catch (...) {}
+						lck.lock();
+					}
+				}
+				now = std::chrono::steady_clock::now();
+				std::chrono::nanoseconds timeout{500 * 1000 * 1000};
+				if (!m_scheduled_set.empty()) timeout = std::min(m_scheduled_set.begin()->timepoint - now, timeout);
+				if (!m_scheduled_cancellable_set.empty())
+					timeout = std::min(m_scheduled_cancellable_set.begin()->timepoint - now, timeout);
+				if (m_pushed.empty() && timeout.count() > 0) {
 					if (m_exit) break;
 					m_cv.wait_for(lck, timeout);
 				}
 			}
 			std::unique_lock lck(m_mtx);
-			for (auto it = m_scheduled.begin(); it != m_scheduled.end(); it++) {
-				if (it->second) {
-					lck.unlock();
+			auto set = std::move(m_scheduled_set);
+			auto cset = std::move(m_scheduled_cancellable_set);
+			lck.unlock();
+			for (auto it = set.begin(); it != set.end(); it++) {
+				if (it->invokable) {
 					try {
-						it->second(false);
+						it->invokable(false);
 					} catch (...) {}
-					lck.lock();
 				}
 			}
-			m_scheduled.clear();
+			for (auto it = cset.begin(); it != cset.end(); it++) {
+				if (it->invokable) {
+					try {
+						it->invokable(false);
+					} catch (...) {}
+				}
+			}
+			m_scheduled_set.clear();
+			m_scheduled_cancellable_set.clear();
 		}
 	};
 

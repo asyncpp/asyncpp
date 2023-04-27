@@ -46,12 +46,26 @@ TEST(ASYNCPP, TimerWaitChrono) {
 	ASSERT_LE(std::chrono::milliseconds{50}, (std::chrono::steady_clock::now() - start));
 }
 
-TEST(ASYNCPP, TimerCancel) {
+TEST(ASYNCPP, TimerDestroyCancel) {
 	auto t = std::make_unique<timer>();
 	auto start = std::chrono::steady_clock::now();
 	auto f = as_promise([](timer& p) -> task<bool> { co_return co_await p.wait(std::chrono::seconds(1)); }(*t));
 	ASSERT_EQ(f.wait_for(std::chrono::milliseconds(5)), std::future_status::timeout);
 	t.reset();
+	ASSERT_EQ(f.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+	ASSERT_EQ(f.get(), false);
+	ASSERT_GE(std::chrono::milliseconds{50}, (std::chrono::steady_clock::now() - start));
+}
+
+TEST(ASYNCPP, TimerCancelDestroy) {
+	timer t;
+	std::stop_source source;
+	auto start = std::chrono::steady_clock::now();
+	std::promise<bool> res;
+	auto f = res.get_future();
+	t.schedule([&res](bool ok) mutable { res.set_value(ok); }, std::chrono::seconds(1), source.get_token());
+	ASSERT_EQ(f.wait_for(std::chrono::milliseconds(5)), std::future_status::timeout);
+	source.request_stop();
 	ASSERT_EQ(f.wait_for(std::chrono::seconds(5)), std::future_status::ready);
 	ASSERT_EQ(f.get(), false);
 	ASSERT_GE(std::chrono::milliseconds{50}, (std::chrono::steady_clock::now() - start));
