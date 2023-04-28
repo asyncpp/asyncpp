@@ -34,12 +34,16 @@ namespace asyncpp {
 			struct cancel_callback {
 				timer* parent;
 				std::multiset<cancellable_scheduled_entry, scheduled_entry::time_less>::const_iterator it;
-				void operator()() {
+				void operator()() const {
 					std::unique_lock lck{parent->m_mtx, std::defer_lock};
 					if (parent->m_thread.get_id() != std::this_thread::get_id()) lck.lock();
 					auto e = parent->m_scheduled_cancellable_set.extract(it);
 					lck.unlock();
-					if (e.value().invokable) e.value().invokable(false);
+					if (e.value().invokable) {
+						parent->push([cb = std::move(e.value().invokable)](){
+							cb(false);
+						});
+					}
 				}
 			};
 			mutable std::optional<std::stop_callback<cancel_callback>> cancel_token;
