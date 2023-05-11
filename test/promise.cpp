@@ -254,3 +254,130 @@ TEST(ASYNCPP, PromiseCallbackReject) {
 	ASSERT_FALSE(p.is_fulfilled());
 	ASSERT_TRUE(p.is_rejected());
 }
+
+TEST(ASYNCPP, PromiseFirst) {
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p1.fulfill(42);
+		ASSERT_TRUE(pall.is_fulfilled());
+		ASSERT_EQ(pall.get(), 42);
+	}
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p2.fulfill(42);
+		ASSERT_TRUE(pall.is_fulfilled());
+		ASSERT_EQ(pall.get(), 42);
+	}
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p1.reject<int>(42);
+		ASSERT_TRUE(pall.is_rejected());
+		bool hit = false;
+		try {
+			pall.get();
+		} catch (int i) {
+			hit = true;
+			ASSERT_EQ(i, 42);
+		}
+		ASSERT_TRUE(hit);
+	}
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p2.reject<int>(42);
+		ASSERT_TRUE(pall.is_rejected());
+		bool hit = false;
+		try {
+			pall.get();
+		} catch (int i) {
+			hit = true;
+			ASSERT_EQ(i, 42);
+		}
+		ASSERT_TRUE(hit);
+	}
+}
+
+TEST(ASYNCPP, PromiseFirstSuccessful) {
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first_successful(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p1.fulfill(42);
+		ASSERT_TRUE(pall.is_fulfilled());
+		p2.reject<int>(43);
+		ASSERT_TRUE(pall.is_fulfilled());
+		ASSERT_EQ(pall.get(), 42);
+	}
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first_successful(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p1.reject<int>(43);
+		ASSERT_TRUE(pall.is_pending());
+		p2.fulfill(42);
+		ASSERT_TRUE(pall.is_fulfilled());
+		ASSERT_EQ(pall.get(), 42);
+	}
+	{
+		promise<int> p1;
+		promise<int> p2;
+		auto pall = promise<int>::first_successful(p1, p2);
+		ASSERT_TRUE(pall.is_pending());
+		p2.reject<int>(43);
+		ASSERT_TRUE(pall.is_pending());
+		p1.reject<int>(42);
+		ASSERT_TRUE(pall.is_rejected());
+		bool hit = false;
+		try {
+			pall.get();
+		} catch (int i) {
+			hit = true;
+			ASSERT_EQ(i, 42);
+		}
+		ASSERT_TRUE(hit);
+	}
+}
+
+TEST(ASYNCPP, PromiseAll) {
+	promise<int> p1, p2;
+	auto all = promise<int>::all({p1, p2});
+	ASSERT_TRUE(p1.is_pending());
+	ASSERT_TRUE(p2.is_pending());
+	ASSERT_TRUE(all.is_pending());
+	p1.fulfill(1);
+	ASSERT_FALSE(p1.is_pending());
+	ASSERT_TRUE(p2.is_pending());
+	ASSERT_TRUE(all.is_pending());
+	p2.fulfill(2);
+	ASSERT_FALSE(p1.is_pending());
+	ASSERT_FALSE(p2.is_pending());
+	ASSERT_FALSE(all.is_pending());
+}
+
+TEST(ASYNCPP, PromiseTryGet) {
+	promise<int> p;
+	auto val = p.try_get();
+	ASSERT_EQ(val, nullptr);
+	p.fulfill(42);
+	val = p.try_get();
+	ASSERT_EQ(*val, 42);
+
+	p = promise<int>::make_rejected<int>(42);
+	ASSERT_THROW(p.try_get(), int);
+	auto res = p.try_get(std::nothrow);
+	ASSERT_EQ(res.first, nullptr);
+	ASSERT_NE(res.second, nullptr);
+}

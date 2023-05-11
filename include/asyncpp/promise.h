@@ -3,8 +3,11 @@
 #include <asyncpp/ref.h>
 #include <cassert>
 #include <condition_variable>
+#include <cstddef>
 #include <functional>
+#include <memory>
 #include <mutex>
+#include <span>
 #include <variant>
 #include <vector>
 
@@ -25,12 +28,17 @@ namespace asyncpp {
 		ref<state> m_state{};
 
 	public:
+		using result_type = TResult;
+
 		/// \brief Construct a new promise object in its pending state
 		promise() : m_state{make_ref<state>()} {}
 		/// \brief Copy constructor
 		promise(const promise& other) : m_state{other.m_state} {}
 		/// \brief Copy assignment
-		promise& operator=(const promise& other) { m_state = other.m_state; }
+		promise& operator=(const promise& other) {
+			m_state = other.m_state;
+			return *this;
+		}
 
 		/**
          * \brief Check if the promise is pending
@@ -79,8 +87,7 @@ namespace asyncpp {
          */
 		bool try_fulfill(TResult&& value) {
 			std::unique_lock lck{m_state->m_mtx};
-			if (!std::holds_alternative<std::monostate>(m_state->m_value))
-				throw std::logic_error("promise is not pending");
+			if (!std::holds_alternative<std::monostate>(m_state->m_value)) return false;
 			m_state->m_value.template emplace<TResult>(std::move(value));
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);
@@ -205,6 +212,30 @@ namespace asyncpp {
 		}
 
 		/**
+         * \brief Synchronously try get the result. If the promise is rejected the rejecting exception gets thrown.
+         * \return TResult* Pointer to the result value or nullptr on timeout
+         */
+		std::pair<TResult*, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
+			state& s = *m_state;
+			std::unique_lock lck{s.m_mtx};
+			if (std::holds_alternative<std::monostate>(s.m_value)) return {nullptr, nullptr};
+			if (std::holds_alternative<TResult>(s.m_value))
+				return {&std::get<TResult>(s.m_value), nullptr};
+			else
+				return {nullptr, std::get<std::exception_ptr>(s.m_value)};
+		}
+
+		/**
+         * \brief Synchronously try get the result. If the promise is rejected the rejecting exception gets thrown.
+         * \return TResult* Pointer to the result value or nullptr on timeout
+         */
+		TResult* try_get() const {
+			auto res = try_get(std::nothrow);
+			if (res.second) std::rethrow_exception(std::move(res.second));
+			return res.first;
+		}
+
+		/**
          * \brief Asynchronously get the result. If the promise is rejected the rejecting exception gets thrown.
          * \return TResult& Pointer to the result value
          */
@@ -254,6 +285,7 @@ namespace asyncpp {
 			res.fulfill(std::move(value));
 			return res;
 		}
+
 		/**
          * \brief Get a rejected promise with the specified exception
          * \param ex Exception to store in the rejected promise
@@ -264,6 +296,7 @@ namespace asyncpp {
 			res.reject(ex);
 			return res;
 		}
+
 		/**
          * \brief Get a rejected promise with the specified exception
          * \tparam TException The type of the exception to store
@@ -275,6 +308,141 @@ namespace asyncpp {
 			promise res;
 			res.reject<TException, Args...>(std::forward<Args>(args)...);
 			return res;
+		}
+
+		/**
+		* \brief Return a promise that is fulfilled/rejected once the first of
+		*		  the specified promises is fulfilled or rejected. This can be
+		*		  used to start multiple operations and continue once the
+		*		  the first one is ready. The results of the remaining promises
+		*		  are ignored.
+		* \tparam T The type of the promises
+		* \param args The promises to wait for
+		* \return A promise that copies the state of the first finished argument.
+		*/
+		template<typename... T>
+		static promise first(promise<T>... args) {
+			promise p;
+			(args.on_result([p](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
+				if (res)
+					p.try_fulfill(std::move(*res));
+				else
+					p.try_reject(ex);
+			}),
+			 ...);
+			return p;
+		}
+
+		/**
+		* \brief Return a promise that is fulfilled once the first of the specified
+		*		  promises is fulfilled. This can be used to start multiple operations
+		*		  and continue once the the first successful is ready. If none of the
+		*         promises gets fulfilled the exception of the last failed promise is returned.
+		*		  The results of the remaining promises are ignored.
+		* \tparam T The type of the promises
+		* \param args The promises to wait for
+		* \return A promise that copies the state of the first successful argument.
+		*/
+		template<typename... T>
+		static promise first_successful(promise<T>... args) {
+			constexpr size_t total = sizeof...(args);
+			promise p;
+			auto finished = std::make_shared<size_t>(0);
+			(args.on_result([p, total, finished](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
+				std::unique_lock lck{p.m_state->m_mtx};
+				(*finished)++;
+				if (!std::holds_alternative<std::monostate>(p.m_state->m_value)) return;
+				if (res) {
+					p.m_state->m_value.template emplace<TResult>(std::move(*res));
+					p.m_state->m_cv.notify_all();
+					auto callbacks = std::move(p.m_state->m_on_result);
+					auto& res = std::get<TResult>(p.m_state->m_value);
+					lck.unlock();
+					for (auto& e : callbacks) {
+						if (e) {
+							try {
+								e(&res, nullptr);
+							} catch (...) { std::terminate(); }
+						}
+					}
+				} else if (*finished == total) {
+					p.m_state->m_value.template emplace<std::exception_ptr>(std::move(ex));
+					p.m_state->m_cv.notify_all();
+					auto callbacks = std::move(p.m_state->m_on_result);
+					auto ex = std::get<std::exception_ptr>(p.m_state->m_value);
+					lck.unlock();
+					for (auto& e : callbacks) {
+						if (e) {
+							try {
+								e(nullptr, ex);
+							} catch (...) { std::terminate(); }
+						}
+					}
+				}
+			}),
+			 ...);
+			return p;
+		}
+
+		/**
+		* \brief Return a promise that is fulfilled once all the specified promises are fulfilled.
+		*		  This can be used to start multiple operations in parallel and collect the results.
+		* \tparam T The type of the promises
+		* \param args The promises to wait for
+		* \return A promise that gets fulfilled with a vector of all promises in
+		* 			the order they are passed once all are finished.
+		*/
+		static promise<std::vector<promise<TResult>>> all(std::vector<promise<TResult>> args) {
+			struct state {
+				size_t total{};
+				std::atomic<size_t> count{};
+				std::vector<promise<TResult>> promises;
+				promise<std::vector<promise<TResult>>> result;
+			};
+			auto s = std::make_shared<state>();
+			s->total = args.size();
+			s->promises = std::move(args);
+			for (auto& e : s->promises) {
+				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
+					auto curid = s->count.fetch_add(1);
+					if (curid + 1 == s->total) { s->result.fulfill(std::move(s->promises)); }
+				});
+			}
+			return s->result;
+		}
+
+		/**
+		* \brief Return a promise that is fulfilled with the value of the promises once all the specified
+		*         promises are fulfilled. This can be used to start multiple operations in parallel and
+		*		  collect the results. Unlike all, the function rejects if any of the promises reject.
+		* \tparam T The type of the promises
+		* \param args The promises to wait for
+		* \return A promise that gets fulfilled with a vector of all values in the order of finishing.
+		*/
+		static promise<std::vector<TResult>> all_values(std::vector<promise<TResult>> args) {
+			struct state {
+				std::mutex mtx{};
+				size_t total{};
+				size_t count{};
+				std::vector<TResult> results;
+				promise<std::vector<promise<TResult>>> promise;
+			};
+			auto s = std::make_shared<state>();
+			s->total = args.size();
+			s->results.reserve(args.size());
+			for (auto& e : s->promises) {
+				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
+					std::unique_lock lck{s->mtx};
+					s->count++;
+					if (!s->promise.is_pending()) return;
+					if (ex) {
+						s->promise.reject(ex);
+					} else if (s->count == s->total) {
+						s->result.fulfill(std::move(s->results));
+					}
+				});
+			}
+			return s->result;
 		}
 	};
 } // namespace asyncpp
