@@ -425,24 +425,25 @@ namespace asyncpp {
 				size_t total{};
 				size_t count{};
 				std::vector<TResult> results;
-				promise<std::vector<promise<TResult>>> promise;
+				promise<std::vector<TResult>> done;
 			};
 			auto s = std::make_shared<state>();
 			s->total = args.size();
 			s->results.reserve(args.size());
-			for (auto& e : s->promises) {
+			for (auto& e : args) {
 				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
 					std::unique_lock lck{s->mtx};
 					s->count++;
-					if (!s->promise.is_pending()) return;
+					if (!s->done.is_pending()) return;
 					if (ex) {
-						s->promise.reject(ex);
-					} else if (s->count == s->total) {
-						s->result.fulfill(std::move(s->results));
+						s->done.reject(ex);
+					} else {
+						s->results.push_back(*res);
+						if (s->count == s->total) s->done.fulfill(std::move(s->results));
 					}
 				});
 			}
-			return s->result;
+			return s->done;
 		}
 	};
 } // namespace asyncpp

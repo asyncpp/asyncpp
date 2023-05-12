@@ -367,6 +367,24 @@ TEST(ASYNCPP, PromiseAll) {
 	ASSERT_FALSE(all.is_pending());
 }
 
+TEST(ASYNCPP, PromiseAllValues) {
+	promise<int> p1, p2;
+	auto all = promise<int>::all_values({p1, p2});
+	ASSERT_TRUE(p1.is_pending());
+	ASSERT_TRUE(p2.is_pending());
+	ASSERT_TRUE(all.is_pending());
+	p1.fulfill(1);
+	ASSERT_FALSE(p1.is_pending());
+	ASSERT_TRUE(p2.is_pending());
+	ASSERT_TRUE(all.is_pending());
+	p2.fulfill(2);
+	ASSERT_FALSE(p1.is_pending());
+	ASSERT_FALSE(p2.is_pending());
+	ASSERT_FALSE(all.is_pending());
+	ASSERT_EQ(all.get()[0], 1);
+	ASSERT_EQ(all.get()[1], 2);
+}
+
 TEST(ASYNCPP, PromiseTryGet) {
 	promise<int> p;
 	auto val = p.try_get();
