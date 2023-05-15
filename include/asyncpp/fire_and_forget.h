@@ -26,17 +26,29 @@ namespace asyncpp {
 				std::function<void()> m_exception_handler{};
 
 			public:
-				constexpr promise_type() noexcept = default;
+				promise_type() noexcept {
+					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+				}
 				promise_type(const promise_type&) = delete;
 				promise_type(promise_type&&) = delete;
+				~promise_type() noexcept {
+					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+				}
 
-				auto get_return_object() noexcept { return coroutine_handle<promise_type>::from_promise(*this); }
+				auto get_return_object() noexcept {
+					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+					return coroutine_handle<promise_type>::from_promise(*this);
+				}
 				constexpr auto initial_suspend() noexcept {
+					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
 					struct awaiter {
 						promise_type* self;
 						constexpr bool await_ready() const noexcept { return false; }
 						constexpr void await_suspend(coroutine_handle<>) const noexcept {}
-						constexpr void await_resume() const noexcept { self->ref(); }
+						constexpr void await_resume() const noexcept {
+							printf("%s %d self=%p\n", __FUNCTION__, __LINE__, self);
+							self->ref();
+						}
 					};
 					return awaiter{this};
 				}
