@@ -4,6 +4,7 @@
 #include <asyncpp/detail/std_import.h>
 #include <asyncpp/policy.h>
 #include <atomic>
+#include <coroutine>
 #include <cstdio>
 #include <utility>
 
@@ -46,23 +47,10 @@ namespace asyncpp {
 				auto initial_suspend() noexcept {
 					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
 					fflush(stdout);
-					class awaiter {
+					struct awaiter {
 						promise_type* self{};
 
-					public:
-						awaiter(promise_type* p) : self(p) {
-							printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-							fflush(stdout);
-						}
-						awaiter(const awaiter&) = delete;
-						awaiter(awaiter&&) = delete;
-						awaiter& operator=(const awaiter&) = delete;
-						awaiter& operator=(awaiter&&) = delete;
-						~awaiter() {
-							printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-							fflush(stdout);
-						}
-						bool await_ready() const noexcept { return false; }
+						bool await_ready() const noexcept { return Eager; }
 						void await_suspend(coroutine_handle<>) const noexcept {}
 						void await_resume() const noexcept {
 							printf("%s %d self=%p\n", __FUNCTION__, __LINE__, self);
@@ -114,7 +102,6 @@ namespace asyncpp {
 			fire_and_forget_task_impl(coroutine_handle<promise_type> h) noexcept : m_coro(h) {
 				printf("%s %d this=%p m_coro=%p\n", __FUNCTION__, __LINE__, this, m_coro.address());
 				fflush(stdout);
-				if (Eager && m_coro) { m_coro.resume(); }
 			}
 
 			/// \brief Move constructor

@@ -19,7 +19,7 @@ namespace asyncpp {
 			printf("%s %d\n", __FUNCTION__, __LINE__);
 			fflush(stdout);
 			try {
-				p.set_value(co_await std::move(t));
+				p.set_value(co_await t);
 				printf("%s %d\n", __FUNCTION__, __LINE__);
 				fflush(stdout);
 			} catch (...) { p.set_exception(std::current_exception()); }
