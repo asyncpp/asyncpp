@@ -16,7 +16,9 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<size_t ID, typename T>
-	void* ptr_tag(T* v) noexcept requires(alignof(T) > ID) {
+	void* ptr_tag(T* v) noexcept
+		requires(alignof(T) > ID)
+	{
 		assert((reinterpret_cast<uintptr_t>(v) & (alignof(T) - 1)) == 0);
 		return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(v) | ID);
 	}
@@ -29,7 +31,9 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<auto ID, typename T>
-	void* ptr_tag(T* v) noexcept requires(std::is_enum_v<decltype(ID)>) {
+	void* ptr_tag(T* v) noexcept
+		requires(std::is_enum_v<decltype(ID)>)
+	{
 		return ptr_tag<static_cast<size_t>(ID), T>(v);
 	}
 
@@ -41,7 +45,9 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<size_t ID, typename T>
-	const void* ptr_tag(const T* v) noexcept requires(alignof(T) > ID) {
+	const void* ptr_tag(const T* v) noexcept
+		requires(alignof(T) > ID)
+	{
 		assert((reinterpret_cast<uintptr_t>(v) & (alignof(T) - 1)) == 0);
 		return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(v) | ID);
 	}
@@ -54,7 +60,9 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<auto ID, typename T>
-	const void* ptr_tag(const T* v) noexcept requires(std::is_enum_v<decltype(ID)>) {
+	const void* ptr_tag(const T* v) noexcept
+		requires(std::is_enum_v<decltype(ID)>)
+	{
 		return ptr_tag<static_cast<size_t>(ID), T>(v);
 	}
 

@@ -102,7 +102,9 @@ namespace asyncpp {
 			}
 
 			/// \brief Start the coroutine execution
-			void start() noexcept requires(!Eager) {
+			void start() noexcept
+				requires(!Eager)
+			{
 				if (m_coro && !m_coro.done()) {
 					m_coro.resume();
 					// Make sure it is only started once

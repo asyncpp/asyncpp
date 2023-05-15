@@ -59,7 +59,7 @@ TEST(ASYNCPP, TimerDestroyCancel) {
 
 TEST(ASYNCPP, TimerCancelDestroy) {
 	timer t;
-	std::stop_source source;
+	asyncpp::stop_source source;
 	auto start = std::chrono::steady_clock::now();
 	std::promise<bool> res;
 	auto f = res.get_future();

@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
 #include <asyncpp/dispatcher.h>
+#include <asyncpp/stop_token.h>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -9,7 +10,6 @@
 #include <optional>
 #include <queue>
 #include <set>
-#include <stop_token>
 #include <thread>
 
 namespace asyncpp {
@@ -40,13 +40,11 @@ namespace asyncpp {
 					auto e = parent->m_scheduled_cancellable_set.extract(it);
 					lck.unlock();
 					if (e.value().invokable) {
-						parent->push([cb = std::move(e.value().invokable)](){
-							cb(false);
-						});
+						parent->push([cb = std::move(e.value().invokable)]() { cb(false); });
 					}
 				}
 			};
-			mutable std::optional<std::stop_callback<cancel_callback>> cancel_token;
+			mutable std::optional<asyncpp::stop_callback<cancel_callback>> cancel_token;
 
 			cancellable_scheduled_entry(std::chrono::steady_clock::time_point tp, std::function<void(bool)> cb) noexcept
 				: scheduled_entry{tp, std::move(cb)} {}
@@ -104,7 +102,8 @@ namespace asyncpp {
 			schedule(std::move(fn), timeout - Clock::now());
 		}
 
-		void schedule(std::function<void(bool)> fn, std::chrono::steady_clock::time_point timeout, std::stop_token st) {
+		void schedule(std::function<void(bool)> fn, std::chrono::steady_clock::time_point timeout,
+					  asyncpp::stop_token st) {
 			if (m_exit) throw std::logic_error("shutting down");
 			if (m_thread.get_id() == std::this_thread::get_id()) {
 				auto it = m_scheduled_cancellable_set.emplace(timeout, std::move(fn));
@@ -117,12 +116,12 @@ namespace asyncpp {
 				lck.unlock();
 			}
 		}
-		void schedule(std::function<void(bool)> fn, std::chrono::nanoseconds timeout, std::stop_token st) {
+		void schedule(std::function<void(bool)> fn, std::chrono::nanoseconds timeout, asyncpp::stop_token st) {
 			schedule(std::move(fn), std::chrono::steady_clock::now() + timeout, std::move(st));
 		}
 		template<typename Clock, typename Duration>
 		void schedule(std::function<void(bool)> fn, std::chrono::time_point<Clock, Duration> timeout,
-					  std::stop_token st) {
+					  asyncpp::stop_token st) {
 			schedule(std::move(fn), timeout - Clock::now(), std::move(st));
 		}
 
@@ -155,13 +154,13 @@ namespace asyncpp {
 			return wait(timeout - Clock::now());
 		}
 
-		auto wait(std::chrono::steady_clock::time_point timeout, std::stop_token st) noexcept {
+		auto wait(std::chrono::steady_clock::time_point timeout, asyncpp::stop_token st) noexcept {
 			struct awaiter {
 				timer* const m_parent;
 				const std::chrono::steady_clock::time_point m_timeout;
-				std::stop_token m_stoptoken;
+				asyncpp::stop_token m_stoptoken;
 				bool m_result;
-				awaiter(timer* t, std::chrono::steady_clock::time_point timeout, std::stop_token st) noexcept
+				awaiter(timer* t, std::chrono::steady_clock::time_point timeout, asyncpp::stop_token st) noexcept
 					: m_parent(t), m_timeout(timeout), m_stoptoken(std::move(st)) {}
 
 				bool await_ready() const noexcept { return std::chrono::steady_clock::now() >= m_timeout; }
@@ -177,11 +176,11 @@ namespace asyncpp {
 			};
 			return awaiter{this, timeout, std::move(st)};
 		}
-		auto wait(std::chrono::nanoseconds timeout, std::stop_token st) noexcept {
+		auto wait(std::chrono::nanoseconds timeout, asyncpp::stop_token st) noexcept {
 			return wait(std::chrono::steady_clock::now() + timeout, std::move(st));
 		}
 		template<typename Clock, typename Duration>
-		auto wait(std::chrono::time_point<Clock, Duration> timeout, std::stop_token st) {
+		auto wait(std::chrono::time_point<Clock, Duration> timeout, asyncpp::stop_token st) {
 			return wait(timeout - Clock::now(), std::move(st));
 		}
 

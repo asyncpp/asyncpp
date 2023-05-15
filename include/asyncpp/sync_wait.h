@@ -10,7 +10,9 @@ namespace asyncpp {
 	 * This can be used to synchronously wait for the result of a coroutine.
 	 */
 	template<typename T, typename Awaitable>
-	std::future<T> as_promise(Awaitable&& t) requires(!std::is_void_v<T>) {
+	std::future<T> as_promise(Awaitable&& t)
+		requires(!std::is_void_v<T>)
+	{
 		std::promise<T> p;
 		auto res = p.get_future();
 		[](std::decay_t<Awaitable> t, std::promise<T> p) -> eager_fire_and_forget_task<> {
@@ -28,7 +30,9 @@ namespace asyncpp {
 	 * This can be used to synchronously wait for the result of a coroutine.
 	 */
 	template<typename T, typename Awaitable>
-	std::future<void> as_promise(Awaitable&& t) requires(std::is_void_v<T>) {
+	std::future<void> as_promise(Awaitable&& t)
+		requires(std::is_void_v<T>)
+	{
 		std::promise<void> p;
 		auto res = p.get_future();
 		[](std::decay_t<Awaitable> t, std::promise<void> p) -> eager_fire_and_forget_task<> {
