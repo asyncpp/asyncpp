@@ -2,7 +2,7 @@ name: Compiler Compatibility CI
 
 on:
   push:
-    branches: [master,macos_crash_debug]
+    branches: [master]
   pull_request:
 
 jobs:
