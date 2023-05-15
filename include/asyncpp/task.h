@@ -55,7 +55,9 @@ namespace asyncpp {
 		class task_promise : public task_promise_base<T, Allocator, task_promise<T, Allocator>> {
 		public:
 			template<class U>
-			void return_value(U&& value) requires(std::is_convertible_v<U, T>) {
+			void return_value(U&& value)
+				requires(std::is_convertible_v<U, T>)
+			{
 				this->m_value.template emplace<T>(value);
 			}
 			T get() { return this->rethrow_if_exception(); }

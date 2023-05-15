@@ -16,11 +16,11 @@ namespace asyncpp {
 	 */
 	template<typename T>
 	concept RefCount = requires() {
-		{T{std::declval<size_t>()}};
-		{ std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
-		{ std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
-		{ std::declval<const T&>().count() } -> std::convertible_to<size_t>;
-	};
+						   { T{std::declval<size_t>()} };
+						   { std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
+						   { std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
+						   { std::declval<const T&>().count() } -> std::convertible_to<size_t>;
+					   };
 
 	/**
 	 * \brief Threadsafe refcount policy
@@ -117,9 +117,9 @@ namespace asyncpp {
 	 */
 	template<typename T>
 	concept RefCountable = requires(T* a) {
-		{refcounted_add_ref(a)};
-		{refcounted_remove_ref(a)};
-	};
+							   { refcounted_add_ref(a) };
+							   { refcounted_remove_ref(a) };
+						   };
 
 	/**
 	 * \brief Reference count handle
