@@ -1,6 +1,6 @@
 #pragma once
 #ifndef ASYNCPP_FORCE_CUSTOM_STOP_TOKEN
-#define ASYNCPP_FORCE_CUSTOM_STOP_TOKEN 1
+#define ASYNCPP_FORCE_CUSTOM_STOP_TOKEN 0
 #endif
 
 #include <version>
