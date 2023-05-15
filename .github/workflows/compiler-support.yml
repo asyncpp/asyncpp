@@ -73,7 +73,7 @@ jobs:
         run: |
           ulimit -c unlimited
           ulimit -c
-          ./asyncpp-test
+          sudo ./asyncpp-test
           sudo chmod -R +rwx /cores/*
       - name: Test
         if: contains(matrix.compiler.runs-on, 'windows')
