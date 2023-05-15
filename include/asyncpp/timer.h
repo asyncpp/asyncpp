@@ -10,7 +10,6 @@
 #include <optional>
 #include <queue>
 #include <set>
-#include <stop_token>
 #include <thread>
 
 namespace asyncpp {
