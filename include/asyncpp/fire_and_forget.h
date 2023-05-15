@@ -43,7 +43,7 @@ namespace asyncpp {
 					fflush(stdout);
 					return coroutine_handle<promise_type>::from_promise(*this);
 				}
-				constexpr auto initial_suspend() noexcept {
+				auto initial_suspend() noexcept {
 					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
 					fflush(stdout);
 					class awaiter {
@@ -62,9 +62,9 @@ namespace asyncpp {
 							printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
 							fflush(stdout);
 						}
-						constexpr bool await_ready() const noexcept { return false; }
-						constexpr void await_suspend(coroutine_handle<>) const noexcept {}
-						constexpr void await_resume() const noexcept {
+						bool await_ready() const noexcept { return false; }
+						void await_suspend(coroutine_handle<>) const noexcept {}
+						void await_resume() const noexcept {
 							printf("%s %d self=%p\n", __FUNCTION__, __LINE__, self);
 							fflush(stdout);
 							self->ref();
