@@ -1,12 +1,12 @@
 #pragma once
 #ifndef ASYNCPP_FORCE_CUSTOM_STOP_TOKEN
-#define ASYNCPP_FORCE_CUSTOM_STOP_TOKEN 0
+#define ASYNCPP_FORCE_CUSTOM_STOP_TOKEN 1
 #endif
 
 #include <version>
 #if defined(_LIBCPP_VERSION) || ASYNCPP_FORCE_CUSTOM_STOP_TOKEN
 #include <atomic>
-#include <semaphore>
+#include <thread>
 #else
 #include <stop_token>
 #endif
@@ -60,13 +60,30 @@ namespace asyncpp {
 			std::this_thread::yield();
 		}
 
+		struct binary_semaphore {
+			explicit binary_semaphore(int initial) : m_counter(initial > 0) {}
+
+			void release() { m_counter.fetch_add(1, std::memory_order::release); }
+
+			void acquire() {
+				int old = 1;
+				while (
+					!m_counter.compare_exchange_weak(old, 0, std::memory_order::acquire, std::memory_order::relaxed)) {
+					old = 1;
+					yield();
+				}
+			}
+
+			std::atomic<int> m_counter;
+		};
+
 		struct stop_cb_node_t {
 			using cb_fn_t = void(stop_cb_node_t*) noexcept;
 			cb_fn_t* m_callback;
 			stop_cb_node_t* m_prev = nullptr;
 			stop_cb_node_t* m_next = nullptr;
 			bool* m_destroyed = nullptr;
-			std::binary_semaphore m_done{0};
+			binary_semaphore m_done{0};
 
 			explicit stop_cb_node_t(cb_fn_t* cb) : m_callback(cb) {}
 
@@ -266,7 +283,7 @@ namespace asyncpp {
 	public:
 		stop_source() : m_state(*this) {}
 
-		explicit stop_source(std::nostopstate_t) noexcept {}
+		explicit stop_source(nostopstate_t) noexcept {}
 
 		stop_source(const stop_source& other) noexcept : m_state(other.m_state) {
 			if (m_state) m_state->add_ssrc();
@@ -375,5 +392,7 @@ namespace asyncpp {
 	using stop_token = std::stop_token;
 	template<typename Callback>
 	using stop_callback = std::stop_callback<Callback>;
+	using nostopstate_t = std::nostopstate_t;
+	inline constexpr nostopstate_t nostopstate{};
 #endif
 } // namespace asyncpp
