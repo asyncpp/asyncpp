@@ -1,11 +1,14 @@
 #pragma once
-#include <atomic>
-#include <semaphore>
-#include <stop_token>
-#include <version>
-
 #ifndef ASYNCPP_FORCE_CUSTOM_STOP_TOKEN
 #define ASYNCPP_FORCE_CUSTOM_STOP_TOKEN 0
+#endif
+
+#include <version>
+#if defined(_LIBCPP_VERSION) || ASYNCPP_FORCE_CUSTOM_STOP_TOKEN
+#include <atomic>
+#include <semaphore>
+#else
+#include <stop_token>
 #endif
 
 namespace asyncpp {
