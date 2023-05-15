@@ -59,6 +59,7 @@ The provided tools include:
 * Awaitable Types:
   * [`defer`](#defer)
   * [`promise<T>`](#promiset)
+  * [`single_consumer_event`](#single_consumer_event)
 * Functions:
   * [`launch()`](#launch)
   * [`as_promise()`](#as_promise)
@@ -72,6 +73,9 @@ The provided tools include:
   * [Reference counting](#reference-counting)
   * [`scope_guard`](#scope_guard)
   * [`threadsafe_queue<T>`](#threadsafe_queuet)
+  * [Stop tokens](#stop-tokens)
+  * [`thread_pool`](#thread_pool)
+  * [`timer`](#timer)
 
 ## `fire_and_forget_task`
 A coroutine task with void return type that can not be awaited. It can be used as an
@@ -129,6 +133,9 @@ co_await defer{some_dispatcher};
 ## `promise<T>`
 Async++ provides a generic promise type similar to `std::promise<T>` but with additional features. You can either `reject()` a promise with an exception provide a value using `fulfill()`. You can also synchronously wait for the promise using `get()`, which optionally accepts a timeout. Unlike `std::promise` however you can also register a callback using `on_result()` which gets executed immediately after a result is available. It also intergrates nicely with coroutines using `co_await`, which will suspend the current coroutine until a result is provided. Unlike `std::promise`, theres no distinction between future and promise, meaning anyone with access to the promise can resolve it.
 
+## `single_consumer_event`
+`single_consumer_event` is a simple event type that allows for one waiting consumer at a time and needs to be manually reset. It can be used to synchronize two coroutines.
+
 ## `launch()`
 Start a coroutine which awaits the provided awaitable. This serves as an optimized version of a coroutine returning `eager_fire_and_forget_task` that immediately invokes `co_await` on the awaitable. The main use case is to start new coroutines that continue execution independent of the invoking function.
 
@@ -172,3 +179,12 @@ Async++ provides a highly customizable intrusive reference counting library with
 
 ## `threadsafe_queue<T>`
 `threadsafe_queue<T>` is a generic threadsafe queue which provides atomic pop and push operations to allow easy implementation of multithreading.
+
+## Stop tokens
+Async++ provides an implementation of the `stop_token` header in order to support the functionality on libc++ based systems (like MacOS). If the header is natively supported by the used stl the provided types are an alias for the `std` implementation in order to increase compatibility.
+
+## `thread_pool`
+`thread_pool` is a dynamic pool of threads that can be resized at runtime and implements the `dispatcher` interface. By default each of the threads has its own queue to reduce locking overhead, but other threads can steal work if they run dry.
+
+## `timer`
+`timer` implements a simple timer thread that allows scheduling a callback at a specified time. It also enables a coroutine to wait in asynchronously and supports cancellation of callbacks/coroutine waits. It also implements the `dispatcher` interface.
