@@ -46,8 +46,22 @@ namespace asyncpp {
 				constexpr auto initial_suspend() noexcept {
 					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
 					fflush(stdout);
-					struct awaiter {
-						promise_type* self;
+					class awaiter {
+						promise_type* self{};
+
+					public:
+						awaiter(promise_type* p) : self(p) {
+							printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+							fflush(stdout);
+						}
+						awaiter(const awaiter&) = delete;
+						awaiter(awaiter&&) = delete;
+						awaiter& operator=(const awaiter&) = delete;
+						awaiter& operator=(awaiter&&) = delete;
+						~awaiter() {
+							printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+							fflush(stdout);
+						}
 						constexpr bool await_ready() const noexcept { return false; }
 						constexpr void await_suspend(coroutine_handle<>) const noexcept {}
 						constexpr void await_resume() const noexcept {
@@ -85,9 +99,15 @@ namespace asyncpp {
 				}
 
 				void unref() noexcept {
+					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+					fflush(stdout);
 					if (m_ref_count.fetch_sub(1) == 1) coroutine_handle<promise_type>::from_promise(*this).destroy();
 				}
-				void ref() noexcept { m_ref_count.fetch_add(1); }
+				void ref() noexcept {
+					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
+					fflush(stdout);
+					m_ref_count.fetch_add(1);
+				}
 			};
 
 			/// \brief Construct from a handle
