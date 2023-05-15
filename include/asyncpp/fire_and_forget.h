@@ -4,8 +4,6 @@
 #include <asyncpp/detail/std_import.h>
 #include <asyncpp/policy.h>
 #include <atomic>
-#include <coroutine>
-#include <cstdio>
 #include <utility>
 
 namespace asyncpp {
@@ -28,35 +26,18 @@ namespace asyncpp {
 				std::function<void()> m_exception_handler{};
 
 			public:
-				promise_type() noexcept {
-					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-					fflush(stdout);
-				}
+				constexpr promise_type() noexcept = default;
 				promise_type(const promise_type&) = delete;
 				promise_type(promise_type&&) = delete;
-				~promise_type() noexcept {
-					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-					fflush(stdout);
-				}
 
-				auto get_return_object() noexcept {
-					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-					fflush(stdout);
-					return coroutine_handle<promise_type>::from_promise(*this);
-				}
-				auto initial_suspend() noexcept {
-					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-					fflush(stdout);
+				auto get_return_object() noexcept { return coroutine_handle<promise_type>::from_promise(*this); }
+				constexpr auto initial_suspend() noexcept {
 					struct awaiter {
-						promise_type* self{};
+						promise_type* self;
 
-						bool await_ready() const noexcept { return Eager; }
-						void await_suspend(coroutine_handle<>) const noexcept {}
-						void await_resume() const noexcept {
-							printf("%s %d self=%p\n", __FUNCTION__, __LINE__, self);
-							fflush(stdout);
-							self->ref();
-						}
+						constexpr bool await_ready() const noexcept { return Eager; }
+						constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+						constexpr void await_resume() const noexcept { self->ref(); }
 					};
 					return awaiter{this};
 				}
@@ -87,22 +68,13 @@ namespace asyncpp {
 				}
 
 				void unref() noexcept {
-					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-					fflush(stdout);
 					if (m_ref_count.fetch_sub(1) == 1) coroutine_handle<promise_type>::from_promise(*this).destroy();
 				}
-				void ref() noexcept {
-					printf("%s %d this=%p\n", __FUNCTION__, __LINE__, this);
-					fflush(stdout);
-					m_ref_count.fetch_add(1);
-				}
+				void ref() noexcept { m_ref_count.fetch_add(1); }
 			};
 
 			/// \brief Construct from a handle
-			fire_and_forget_task_impl(coroutine_handle<promise_type> h) noexcept : m_coro(h) {
-				printf("%s %d this=%p m_coro=%p\n", __FUNCTION__, __LINE__, this, m_coro.address());
-				fflush(stdout);
-			}
+			fire_and_forget_task_impl(coroutine_handle<promise_type> h) noexcept : m_coro(h) {}
 
 			/// \brief Move constructor
 			fire_and_forget_task_impl(fire_and_forget_task_impl&& t) noexcept : m_coro(std::exchange(t.m_coro, {})) {}

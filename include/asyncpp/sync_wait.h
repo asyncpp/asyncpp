@@ -16,18 +16,10 @@ namespace asyncpp {
 		std::promise<T> p;
 		auto res = p.get_future();
 		[](std::decay_t<Awaitable> t, std::promise<T> p) -> eager_fire_and_forget_task<> {
-			printf("%s %d\n", __FUNCTION__, __LINE__);
-			fflush(stdout);
 			try {
-				p.set_value(co_await t);
-				printf("%s %d\n", __FUNCTION__, __LINE__);
-				fflush(stdout);
+				p.set_value(co_await std::move(t));
 			} catch (...) { p.set_exception(std::current_exception()); }
-			printf("%s %d\n", __FUNCTION__, __LINE__);
-			fflush(stdout);
 		}(std::move(t), std::move(p));
-		printf("%s %d\n", __FUNCTION__, __LINE__);
-		fflush(stdout);
 		return res;
 	}
 
