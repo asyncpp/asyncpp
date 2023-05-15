@@ -34,7 +34,8 @@ namespace asyncpp {
 				constexpr auto initial_suspend() noexcept {
 					struct awaiter {
 						promise_type* self;
-						constexpr bool await_ready() const noexcept { return false; }
+
+						constexpr bool await_ready() const noexcept { return Eager; }
 						constexpr void await_suspend(coroutine_handle<>) const noexcept {}
 						constexpr void await_resume() const noexcept { self->ref(); }
 					};
@@ -73,9 +74,7 @@ namespace asyncpp {
 			};
 
 			/// \brief Construct from a handle
-			fire_and_forget_task_impl(coroutine_handle<promise_type> h) noexcept : m_coro(h) {
-				if (Eager && m_coro) { m_coro.resume(); }
-			}
+			fire_and_forget_task_impl(coroutine_handle<promise_type> h) noexcept : m_coro(h) {}
 
 			/// \brief Move constructor
 			fire_and_forget_task_impl(fire_and_forget_task_impl&& t) noexcept : m_coro(std::exchange(t.m_coro, {})) {}
