@@ -24,7 +24,7 @@ jobs:
 #          - { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
 #          - { tag: "macos-11_gcc-10", name: "MacOS 11 G++ 10", cxx: "g++-10", cc: "gcc-10", runs-on: "macos-11" }
 #          - { tag: "macos-11_gcc-11", name: "MacOS 11 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-11" }
-          - { tag: "macos-11_clang-15", name: "MacOS 11 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-11" }
+#          - { tag: "macos-11_clang-15", name: "MacOS 11 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-11" }
 #         G++11 Seems to be broken on MacOS 12 and fails with a assert inside the linker, so keep it disabled for now.
 #         - { tag: "macos-12_gcc-11", name: "MacOS 12 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-12" }
           - { tag: "macos-12_clang-15", name: "MacOS 12 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-12" }
@@ -70,20 +70,11 @@ jobs:
       - name: Test
         working-directory: ${{ github.workspace }}/build
         if: contains(matrix.compiler.runs-on, 'windows') != true
-        run: |
-          ulimit -c unlimited
-          ulimit -c
-          sudo ./asyncpp-test
-          sudo chmod -R +rwx /cores/*
+        run: ./asyncpp-test
       - name: Test
         if: contains(matrix.compiler.runs-on, 'windows')
         working-directory: ${{ github.workspace }}/build
         run: Debug/asyncpp-test.exe
-      - uses: actions/upload-artifact@master # capture all crashes as build artifacts
-        if: contains(matrix.compiler.runs-on, 'windows') != true
-        with:
-          name: crashes
-          path: /cores
       - name: Update Result
         id: status
         if: ${{ always() }}

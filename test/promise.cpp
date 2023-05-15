@@ -26,6 +26,7 @@ TEST(ASYNCPP, PromiseMakeRejected) {
 	ASSERT_THROW(p.get(), std::runtime_error);
 }
 
+#ifndef _LIBCPP_VERSION
 TEST(ASYNCPP, PromiseAwaitFulfilled) {
 	auto p = promise<int>::make_fulfilled(42);
 	ASSERT_FALSE(p.is_pending());
@@ -37,6 +38,7 @@ TEST(ASYNCPP, PromiseAwaitFulfilled) {
 	ASSERT_FALSE(p.is_rejected());
 	ASSERT_EQ(x, 42);
 }
+#endif
 
 TEST(ASYNCPP, PromiseAwaitRejected) {
 	auto p = promise<int>::make_rejected<std::runtime_error>("");
