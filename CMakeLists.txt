@@ -5,6 +5,7 @@ find_package(Threads REQUIRED)
 
 option(ASYNCPP_BUILD_TEST "Enable test builds" ON)
 option(ASYNCPP_WITH_ASAN "Enable asan for test builds" ON)
+option(ASYNCPP_WITH_TSAN "Enable tsan for test builds" ON)
 
 add_library(asyncpp INTERFACE)
 target_link_libraries(asyncpp INTERFACE Threads::Threads)
@@ -72,6 +73,20 @@ if(ASYNCPP_BUILD_TEST)
     else()
       target_compile_options(asyncpp-test PRIVATE -fsanitize=address)
       target_link_libraries(asyncpp-test PRIVATE asan)
+    endif()
+  endif()
+  if(ASYNCPP_WITH_TSAN)
+    message(STATUS "Building with tsan enabled")
+    if(MSVC)
+      target_compile_options(asyncpp-test PRIVATE -fsanitize=thread /Zi)
+      target_compile_definitions(asyncpp-test
+                                 PRIVATE _DISABLE_VECTOR_ANNOTATION)
+      target_compile_definitions(asyncpp-test
+                                 PRIVATE _DISABLE_STRING_ANNOTATION)
+      target_link_libraries(asyncpp-test PRIVATE libsancov.lib)
+    else()
+      target_compile_options(asyncpp-test PRIVATE -fsanitize=thread)
+      target_link_libraries(asyncpp-test PRIVATE tsan)
     endif()
   endif()
 
