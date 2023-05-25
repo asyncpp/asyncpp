@@ -5,7 +5,7 @@ find_package(Threads REQUIRED)
 
 option(ASYNCPP_BUILD_TEST "Enable test builds" ON)
 option(ASYNCPP_WITH_ASAN "Enable asan for test builds" ON)
-option(ASYNCPP_WITH_TSAN "Enable tsan for test builds" ON)
+option(ASYNCPP_WITH_TSAN "Enable tsan for test builds" OFF)
 
 add_library(asyncpp INTERFACE)
 target_link_libraries(asyncpp INTERFACE Threads::Threads)
