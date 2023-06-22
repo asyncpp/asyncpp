@@ -3,6 +3,7 @@
 #include <asyncpp/detail/std_import.h>
 #include <cassert>
 #include <variant>
+#include <stdexcept>
 
 namespace asyncpp {
 	template<class T, ByteAllocator Allocator>
@@ -58,7 +59,7 @@ namespace asyncpp {
 			void return_value(U&& value)
 				requires(std::is_convertible_v<U, T>)
 			{
-				this->m_value.template emplace<T>(value);
+				this->m_value.template emplace<T>(std::move(value));
 			}
 			T get() { return this->rethrow_if_exception(); }
 		};
