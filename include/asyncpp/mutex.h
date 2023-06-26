@@ -92,7 +92,7 @@ namespace asyncpp {
 	};
 
 	struct [[nodiscard]] mutex::lock_awaiter {
-		mutex* mutex;
+		class mutex* mutex;
 		lock_awaiter* next{nullptr};
 		coroutine_handle<> handle{};
 		constexpr bool await_ready() const noexcept { return false; }
@@ -124,7 +124,7 @@ namespace asyncpp {
          * \brief Construct a mutex_lock for the given mutex, adopting the lock
          * \note Behaviour is undefined if the supplied mutex has not been locked (e.g. using try_lock()).
          */
-		constexpr mutex_lock(class mutex& mtx, std::adopt_lock_t) noexcept : m_mtx(&mtx), m_locked{true} {
+		mutex_lock(class mutex& mtx, std::adopt_lock_t) noexcept : m_mtx(&mtx), m_locked{true} {
 			assert(mtx.is_locked());
 		}
 		/**
