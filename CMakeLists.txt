@@ -50,6 +50,7 @@ if(ASYNCPP_BUILD_TEST)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/fire_and_forget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/generator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/launch.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/mutex.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/promise.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/ptr_tag.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/ref.cpp

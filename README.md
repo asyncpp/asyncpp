@@ -51,15 +51,15 @@ Also checkout the async wrappers for other libraries:
 * [asyncpp-uring](https://github.com/asyncpp/asyncpp-uring)
 
 The provided tools include:
-* Coroutine Types:
+* Types:
   * [`fire_and_forget_task`](#fire_and_forget_task)
   * [`eager_fire_and_forget_task`](#eager_fire_and_forget_task)
   * [`generator<T>`](#generatort)
   * [`task<T>`](#taskt)
-* Awaitable Types:
   * [`defer`](#defer)
   * [`promise<T>`](#promiset)
   * [`single_consumer_event`](#single_consumer_event)
+  * [`mutex`](#mutex)
 * Functions:
   * [`launch()`](#launch)
   * [`as_promise()`](#as_promise)
@@ -135,6 +135,9 @@ Async++ provides a generic promise type similar to `std::promise<T>` but with ad
 
 ## `single_consumer_event`
 `single_consumer_event` is a simple event type that allows for one waiting consumer at a time and needs to be manually reset. It can be used to synchronize two coroutines.
+
+## `mutex`
+`mutex` provides a simple mutex that can be used inside coroutines to restrict access to a resource. Locking suspends the current coroutine until the mutex is available again. The `mutex` does not depend on being unlocked in the same thread it was locked, allowing it to be locked across suspension points that might switch the coroutine to a different thread (like a network request). `mutex_lock` is a companion class that provides a RAII wrapper similar to `std::lock_guard`.
 
 ## `launch()`
 Start a coroutine which awaits the provided awaitable. This serves as an optimized version of a coroutine returning `eager_fire_and_forget_task` that immediately invokes `co_await` on the awaitable. The main use case is to start new coroutines that continue execution independent of the invoking function.
