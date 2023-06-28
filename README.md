@@ -63,6 +63,7 @@ The provided tools include:
   * [`multi_consumer_event`](#multi_consumer_event)
   * [`multi_consumer_auto_reset_event`](#multi_consumer_auto_reset_event)
   * [`mutex`](#mutex)
+  * [`latch`](#latch)
 * Functions:
   * [`launch()`](#launch)
   * [`as_promise()`](#as_promise)
@@ -134,7 +135,7 @@ co_await defer{some_dispatcher};
 ```
 
 ## `promise<T>`
-Async++ provides a generic promise type similar to `std::promise<T>` but with additional features. You can either `reject()` a promise with an exception provide a value using `fulfill()`. You can also synchronously wait for the promise using `get()`, which optionally accepts a timeout. Unlike `std::promise` however you can also register a callback using `on_result()` which gets executed immediately after a result is available. It also intergrates nicely with coroutines using `co_await`, which will suspend the current coroutine until a result is provided. Unlike `std::promise`, theres no distinction between future and promise, meaning anyone with access to the promise can resolve it.
+Async++ provides a generic promise type similar to `std::promise<T>` but with additional features. You can either `reject()` a promise with an exception or provide a value using `fulfill()`. You can also synchronously wait for the promise using `get()`, which optionally accepts a timeout. Unlike `std::promise` however you can also register a callback using `on_result()` which gets executed immediately after a result is available. It also intergrates nicely with coroutines using `co_await`, which will suspend the current coroutine until a result is provided. Unlike `std::promise`, theres no distinction between future and promise, meaning anyone with access to the promise can resolve it.
 ### Summary
 ```cpp
 template<typename TResult>
@@ -202,6 +203,22 @@ Similar to `single_consumer_event`, but can be awaited by multiple coroutines co
 
 ## `mutex`
 `mutex` provides a simple mutex that can be used inside coroutines to restrict access to a resource. Locking suspends the current coroutine until the mutex is available again. The `mutex` does not depend on being unlocked in the same thread it was locked, allowing it to be locked across suspension points that might switch the coroutine to a different thread (like a network request). `mutex_lock` is a companion class that provides a RAII wrapper similar to `std::lock_guard`.
+
+## `latch`
+An async latch is a synchronization primitive that allows coroutines to asynchronously wait until a counter has been decremented to zero. The latch is a single-use object. Once the counter reaches zero the latch becomes 'ready' and will remain ready until the latch is destroyed.
+### Summary
+```cpp
+class asyncpp::latch {
+public:
+  latch(std::size_t initial) noexcept;
+  latch(const latch&) = delete;
+  latch& operator=(const latch&) = delete;
+  bool is_ready() const noexcept;
+  void decrement(std::size_t n = 1) noexcept;
+  auto operator co_await() noexcept;
+  auto wait(dispatcher* resume_dispatcher = nullptr) noexcept;
+};
+```
 
 ## `launch()`
 Start a coroutine which awaits the provided awaitable. This serves as an optimized version of a coroutine returning `eager_fire_and_forget_task` that immediately invokes `co_await` on the awaitable. The main use case is to start new coroutines that continue execution independent of the invoking function.

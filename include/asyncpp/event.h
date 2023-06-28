@@ -360,7 +360,6 @@ namespace asyncpp {
 			return awaiter{this, resume_dispatcher};
 		}
 
-
 	private:
 		/* nullptr => unset
 		 * this => set
@@ -388,7 +387,7 @@ namespace asyncpp {
 			constexpr void await_resume() const noexcept {}
 		};
 	};
-	
+
 	/**
      * \brief Simple auto reset event supporting multiple consumers.
      * 
@@ -418,7 +417,8 @@ namespace asyncpp {
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-		constexpr multi_consumer_auto_reset_event(bool set_initially = false) noexcept : m_state(set_initially ? this : nullptr) {}
+		constexpr multi_consumer_auto_reset_event(bool set_initially = false) noexcept
+			: m_state(set_initially ? this : nullptr) {}
 #ifndef NDEBUG
 		~multi_consumer_auto_reset_event() noexcept { assert(!is_awaited()); }
 #endif
