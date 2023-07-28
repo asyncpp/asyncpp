@@ -59,7 +59,11 @@ The provided tools include:
   * [`defer`](#defer)
   * [`promise<T>`](#promiset)
   * [`single_consumer_event`](#single_consumer_event)
+  * [`single_consumer_auto_reset_event`](#single_consumer_auto_reset_event)
+  * [`multi_consumer_event`](#multi_consumer_event)
+  * [`multi_consumer_auto_reset_event`](#multi_consumer_auto_reset_event)
   * [`mutex`](#mutex)
+  * [`latch`](#latch)
 * Functions:
   * [`launch()`](#launch)
   * [`as_promise()`](#as_promise)
@@ -131,13 +135,90 @@ co_await defer{some_dispatcher};
 ```
 
 ## `promise<T>`
-Async++ provides a generic promise type similar to `std::promise<T>` but with additional features. You can either `reject()` a promise with an exception provide a value using `fulfill()`. You can also synchronously wait for the promise using `get()`, which optionally accepts a timeout. Unlike `std::promise` however you can also register a callback using `on_result()` which gets executed immediately after a result is available. It also intergrates nicely with coroutines using `co_await`, which will suspend the current coroutine until a result is provided. Unlike `std::promise`, theres no distinction between future and promise, meaning anyone with access to the promise can resolve it.
+Async++ provides a generic promise type similar to `std::promise<T>` but with additional features. You can either `reject()` a promise with an exception or provide a value using `fulfill()`. You can also synchronously wait for the promise using `get()`, which optionally accepts a timeout. Unlike `std::promise` however you can also register a callback using `on_result()` which gets executed immediately after a result is available. It also intergrates nicely with coroutines using `co_await`, which will suspend the current coroutine until a result is provided. Unlike `std::promise`, theres no distinction between future and promise, meaning anyone with access to the promise can resolve it.
+### Summary
+```cpp
+template<typename TResult>
+class asyncpp::promise {
+public:
+  using result_type = TResult;
+  promise();
+  promise(const promise& other);
+  promise& operator=(const promise& other);
+  bool is_pending() const noexcept;
+  bool is_fulfilled() const noexcept;
+  bool is_rejected() const noexcept;
+  void fulfill(TResult&& value);
+  bool try_fulfill(TResult&& value);
+  void reject(std::exception_ptr e);
+  bool try_reject(std::exception_ptr e);
+  template<typename TException, typename... Args>
+  void reject(Args&&... args);
+  template<typename TException, typename... Args>
+  bool try_reject(Args&&... args);
+  void on_result(std::function<void(TResult*, std::exception_ptr)> cb);
+  TResult& get() const;
+  TResult* get(std::chrono::duration timeout) const;
+  std::pair<TResult*, std::exception_ptr> try_get(std::nothrow_t) const noexcept;
+  TResult* try_get() const;
+  auto operator co_await() const noexcept;
+
+  static promise make_fulfilled(TResult&& value);
+  static promise make_rejected(std::exception_ptr ex);
+  template<typename TException, typename... Args>
+  static promise make_rejected(Args&&... args);
+  template<typename... T>
+  static promise first(promise<T>... args);
+  template<typename... T>
+  static promise first_successful(promise<T>... args);
+  static promise<std::vector<promise<TResult>>> all(std::vector<promise<TResult>> args);
+  static promise<std::vector<TResult>> all_values(std::vector<promise<TResult>> args);
+};
+```
 
 ## `single_consumer_event`
-`single_consumer_event` is a simple event type that allows for one waiting consumer at a time and needs to be manually reset. It can be used to synchronize two coroutines.
+This is similar in concept to a `std::condition_variable` and allows synchronization between coroutines, as well as normal code and coroutines. If the current coroutine co_await's the event it is suspended until some other coroutine or thread calls `set()`. If the event is already set when calling co_await the coroutine will directly continue execution in the current thread. If the event is not set, the coroutine gets resumed on the dispatcher that's passed into `wait()` or inside the call to `set()` if no dispatcher was provided. The operator co_await will behave as if `wait()` was called with the result of `dispatcher::current()`, meaning the coroutine is resumed on the same dispatcher it suspended (not necessarily the same thread, e.g. on a thread pool). If no dispatcher is associated with the current thread it is resumed inside `set()`.
+### Summary
+```cpp
+class asyncpp::single_consumer_event {
+public:
+  single_consumer_event(bool set_initially = false) noexcept;
+  bool is_set() const noexcept;
+  bool is_awaited() const noexcept;
+  bool set(dispatcher* resume_dispatcher = nullptr) noexcept;
+  void reset() noexcept;
+  auto operator co_await() noexcept;
+  auto wait(dispatcher* resume_dispatcher = nullptr) noexcept;
+};
+```
+
+## `single_consumer_auto_reset_event`
+Similar to `single_consumer_event`, but the event is automatically reset if a coroutine is resumed.
+
+## `multi_consumer_event`
+Similar to `single_consumer_event`, but can be awaited by multiple coroutines concurrently. The coroutines are resumed in LIFO order.
+
+## `multi_consumer_auto_reset_event`
+Similar to `single_consumer_event`, but can be awaited by multiple coroutines concurrently. The coroutines are resumed in LIFO order. The event is automatically reset if a coroutine is resumed.
 
 ## `mutex`
 `mutex` provides a simple mutex that can be used inside coroutines to restrict access to a resource. Locking suspends the current coroutine until the mutex is available again. The `mutex` does not depend on being unlocked in the same thread it was locked, allowing it to be locked across suspension points that might switch the coroutine to a different thread (like a network request). `mutex_lock` is a companion class that provides a RAII wrapper similar to `std::lock_guard`.
+
+## `latch`
+An async latch is a synchronization primitive that allows coroutines to asynchronously wait until a counter has been decremented to zero. The latch is a single-use object. Once the counter reaches zero the latch becomes 'ready' and will remain ready until the latch is destroyed.
+### Summary
+```cpp
+class asyncpp::latch {
+public:
+  latch(std::size_t initial) noexcept;
+  latch(const latch&) = delete;
+  latch& operator=(const latch&) = delete;
+  bool is_ready() const noexcept;
+  void decrement(std::size_t n = 1) noexcept;
+  auto operator co_await() noexcept;
+  auto wait(dispatcher* resume_dispatcher = nullptr) noexcept;
+};
+```
 
 ## `launch()`
 Start a coroutine which awaits the provided awaitable. This serves as an optimized version of a coroutine returning `eager_fire_and_forget_task` that immediately invokes `co_await` on the awaitable. The main use case is to start new coroutines that continue execution independent of the invoking function.
