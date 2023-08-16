@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/promise_allocator_base.h>
 #include <asyncpp/detail/std_import.h>
+#include <exception>
 #include <functional>
 #include <variant>
 
