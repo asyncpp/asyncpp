@@ -3,3 +3,4 @@
 # MSVC
 /.vs
 /out/Build
+/doxy
