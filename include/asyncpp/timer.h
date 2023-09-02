@@ -35,15 +35,35 @@ namespace asyncpp {
 				timer* parent;
 				std::multiset<cancellable_scheduled_entry, scheduled_entry::time_less>::const_iterator it;
 				void operator()() const {
-					std::unique_lock lck{parent->m_mtx};
-					auto e = parent->m_scheduled_cancellable_set.extract(it);
-					lck.unlock();
-					if (e.value().invokable) {
-						parent->push([cb = std::move(e.value().invokable)]() { cb(false); });
+					// We have to distinguish between cancellation while in the process of construction and
+					// cancellation afterwards. If the stop_token is signalled at the time of construction it directly
+					// invokes the callback, however if we would lock at that point we would cause a deadlock with the
+					// outside lock in schedule(). We also can't directly delete the node in this case because
+					// std::optional<>::emplace tries to set a flag after construction which would cause use after free.
+					// Thus we set a flag in schedule() and postpone both the invoke and deletion until after emplace is done.
+					// If we are not in construction we need to lock and can directly destroy the node once we are done.
+					if (it->in_construction) {
+						auto e = new std::multiset<cancellable_scheduled_entry, scheduled_entry::time_less>::node_type(
+							parent->m_scheduled_cancellable_set.extract(it));
+						if (e->value().invokable) {
+							parent->m_pushed.emplace([e]() {
+								e->value().invokable(false);
+								delete e;
+							});
+						}
+					} else {
+						std::unique_lock lck{parent->m_mtx};
+						auto e = parent->m_scheduled_cancellable_set.extract(it);
+						lck.unlock();
+						if (e.value().invokable) {
+							parent->m_pushed.emplace([cb = std::move(e.value().invokable)]() { cb(false); });
+							parent->m_cv.notify_all();
+						}
 					}
 				}
 			};
 			mutable std::optional<asyncpp::stop_callback<cancel_callback>> cancel_token;
+			mutable bool in_construction{true};
 
 			cancellable_scheduled_entry(std::chrono::steady_clock::time_point tp, std::function<void(bool)> cb) noexcept
 				: scheduled_entry{tp, std::move(cb)} {}
@@ -73,14 +93,14 @@ namespace asyncpp {
 
 		void push(std::function<void()> fn) override {
 			if (m_exit) throw std::logic_error("shutting down");
-			std::unique_lock<std::mutex> lck(m_mtx);
+			std::unique_lock lck(m_mtx);
 			m_pushed.emplace(std::move(fn));
 			m_cv.notify_all();
 		}
 
 		void schedule(std::function<void(bool)> fn, std::chrono::steady_clock::time_point timeout) {
 			if (m_exit) throw std::logic_error("shutting down");
-			std::unique_lock<std::mutex> lck(m_mtx);
+			std::unique_lock lck(m_mtx);
 			m_scheduled_set.emplace(timeout, std::move(fn));
 			m_cv.notify_all();
 		}
@@ -95,9 +115,10 @@ namespace asyncpp {
 		void schedule(std::function<void(bool)> fn, std::chrono::steady_clock::time_point timeout,
 					  asyncpp::stop_token st) {
 			if (m_exit) throw std::logic_error("shutting down");
-			std::unique_lock<std::mutex> lck(m_mtx);
+			std::unique_lock lck(m_mtx);
 			auto it = m_scheduled_cancellable_set.emplace(timeout, std::move(fn));
 			it->cancel_token.emplace(std::move(st), cancellable_scheduled_entry::cancel_callback{this, it});
+			it->in_construction = false;
 			m_cv.notify_all();
 		}
 		void schedule(std::function<void(bool)> fn, std::chrono::nanoseconds timeout, asyncpp::stop_token st) {
