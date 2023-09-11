@@ -204,6 +204,9 @@ namespace asyncpp {
 		std::thread m_thread;
 
 		void run() noexcept {
+#ifdef __linux__
+			pthread_setname_np(pthread_self(), "asyncpp_timer");
+#endif
 			while (true) {
 				std::unique_lock lck(m_mtx);
 				while (!m_pushed.empty()) {
