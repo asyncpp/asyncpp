@@ -151,7 +151,8 @@ namespace asyncpp {
 			};
 			return awaiter{this, timeout};
 		}
-		auto wait(std::chrono::nanoseconds timeout) noexcept {
+		template<typename Rep, typename Period>
+		auto wait(std::chrono::duration<Rep, Period> timeout) noexcept {
 			return wait(std::chrono::steady_clock::now() + timeout);
 		}
 		template<typename Clock, typename Duration>
@@ -181,7 +182,8 @@ namespace asyncpp {
 			};
 			return awaiter{this, timeout, std::move(st)};
 		}
-		auto wait(std::chrono::nanoseconds timeout, asyncpp::stop_token st) noexcept {
+		template<typename Rep, typename Period>
+		auto wait(std::chrono::duration<Rep, Period> timeout, asyncpp::stop_token st) noexcept {
 			return wait(std::chrono::steady_clock::now() + timeout, std::move(st));
 		}
 		template<typename Clock, typename Duration>
