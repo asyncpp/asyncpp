@@ -36,7 +36,7 @@ namespace asyncpp {
 		promise(const promise& other) : m_state{other.m_state} {}
 		/// \brief Copy assignment
 		promise& operator=(const promise& other) {
-			m_state = other.m_state;
+			if (&other != this) m_state = other.m_state;
 			return *this;
 		}
 
@@ -44,7 +44,7 @@ namespace asyncpp {
          * \brief Check if the promise is pending
          * \note This is a temporary snapshot and should only be used for logging. Consider the returned value potentially invalid by the moment the call returns.
          */
-		bool is_pending() const noexcept {
+		[[nodiscard]] bool is_pending() const noexcept {
 			std::unique_lock lck{m_state->m_mtx};
 			return std::holds_alternative<std::monostate>(m_state->m_value);
 		}
@@ -54,7 +54,7 @@ namespace asyncpp {
          * \note Unlike is_pending() this value is permanent.
          * \return true if the promise contains a value.
          */
-		bool is_fulfilled() const noexcept {
+		[[nodiscard]] bool is_fulfilled() const noexcept {
 			std::unique_lock lck{m_state->m_mtx};
 			return std::holds_alternative<TResult>(m_state->m_value);
 		}
@@ -64,7 +64,7 @@ namespace asyncpp {
          * \note Unlike is_pending() this value is permanent.
          * \return true if the promise contains an exception.
          */
-		bool is_rejected() const noexcept {
+		[[nodiscard]] bool is_rejected() const noexcept {
 			std::unique_lock lck{m_state->m_mtx};
 			return std::holds_alternative<std::exception_ptr>(m_state->m_value);
 		}
@@ -88,15 +88,14 @@ namespace asyncpp {
 		bool try_fulfill(TResult&& value) {
 			std::unique_lock lck{m_state->m_mtx};
 			if (!std::holds_alternative<std::monostate>(m_state->m_value)) return false;
-			m_state->m_value.template emplace<TResult>(std::move(value));
+			auto& res = m_state->m_value.template emplace<TResult>(std::move(value));
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);
-			auto& res = std::get<TResult>(m_state->m_value);
 			lck.unlock();
-			for (auto& e : callbacks) {
-				if (e) {
+			for (auto& callback : callbacks) {
+				if (callback) {
 					try {
-						e(&res, nullptr);
+						callback(&res, nullptr);
 					} catch (...) { std::terminate(); }
 				}
 			}
@@ -109,8 +108,8 @@ namespace asyncpp {
          * \param ex The exception to use for rejection
          * \note Callbacks and waiting coroutines are resumed inside this call
          */
-		void reject(std::exception_ptr e) {
-			if (!try_reject(e)) throw std::logic_error("promise is not pending");
+		void reject(std::exception_ptr exception) {
+			if (!try_reject(exception)) throw std::logic_error("promise is not pending");
 		}
 
 		/**
@@ -119,18 +118,17 @@ namespace asyncpp {
          * \param ex The exception to use for rejection
          * \note Callbacks and waiting coroutines are resumed inside this call
          */
-		bool try_reject(std::exception_ptr e) {
+		bool try_reject(std::exception_ptr exception) {
 			std::unique_lock lck{m_state->m_mtx};
 			if (!std::holds_alternative<std::monostate>(m_state->m_value)) return false;
-			m_state->m_value.template emplace<std::exception_ptr>(std::move(e));
+			m_state->m_value.template emplace<std::exception_ptr>(exception);
 			m_state->m_cv.notify_all();
 			auto callbacks = std::move(m_state->m_on_result);
-			auto ex = std::get<std::exception_ptr>(m_state->m_value);
 			lck.unlock();
-			for (auto& e : callbacks) {
-				if (e) {
+			for (auto& callback : callbacks) {
+				if (callback) {
 					try {
-						e(nullptr, ex);
+						callback(nullptr, exception);
 					} catch (...) { std::terminate(); }
 				}
 			}
@@ -165,17 +163,17 @@ namespace asyncpp {
          * \brief Register a callback to be executed once a result is available. If the promise is not pending the callback is directly executed.
          * \param cb Callback to invoke as soon as a result is available.
          */
-		void on_result(std::function<void(TResult*, std::exception_ptr)> cb) {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			if (std::holds_alternative<std::monostate>(s.m_value)) {
-				s.m_on_result.emplace_back(std::move(cb));
-			} else if (std::holds_alternative<TResult>(s.m_value)) {
+		void on_result(std::function<void(TResult*, std::exception_ptr)> callback) {
+			auto& state = *m_state;
+			std::unique_lock lck{state.m_mtx};
+			if (std::holds_alternative<std::monostate>(state.m_value)) {
+				state.m_on_result.emplace_back(std::move(callback));
+			} else if (std::holds_alternative<TResult>(state.m_value)) {
 				lck.unlock();
-				cb(&std::get<TResult>(s.m_value), nullptr);
+				callback(&std::get<TResult>(state.m_value), nullptr);
 			} else {
 				lck.unlock();
-				cb(nullptr, std::get<std::exception_ptr>(s.m_value));
+				callback(nullptr, std::get<std::exception_ptr>(state.m_value));
 			}
 		}
 
@@ -184,15 +182,13 @@ namespace asyncpp {
          * \return TResult& Reference to the result value
          */
 		TResult& get() const {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			while (std::holds_alternative<std::monostate>(s.m_value)) {
-				s.m_cv.wait(lck);
+			auto& state = *m_state;
+			std::unique_lock lck{state.m_mtx};
+			while (std::holds_alternative<std::monostate>(state.m_value)) {
+				state.m_cv.wait(lck);
 			}
-			if (std::holds_alternative<TResult>(s.m_value))
-				return std::get<TResult>(s.m_value);
-			else
-				std::rethrow_exception(std::get<std::exception_ptr>(s.m_value));
+			if (std::holds_alternative<TResult>(state.m_value)) return std::get<TResult>(state.m_value);
+			std::rethrow_exception(std::get<std::exception_ptr>(state.m_value));
 		}
 
 		/**
@@ -201,28 +197,24 @@ namespace asyncpp {
          */
 		template<class Rep, class Period>
 		TResult* get(std::chrono::duration<Rep, Period> timeout) const {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			if (std::holds_alternative<std::monostate>(s.m_value)) s.m_cv.wait_for(lck, timeout);
-			if (std::holds_alternative<std::monostate>(s.m_value)) return nullptr;
-			if (std::holds_alternative<TResult>(s.m_value))
-				return &std::get<TResult>(s.m_value);
-			else
-				std::rethrow_exception(std::get<std::exception_ptr>(s.m_value));
+			auto& state = *m_state;
+			std::unique_lock lck{state.m_mtx};
+			if (std::holds_alternative<std::monostate>(state.m_value)) state.m_cv.wait_for(lck, timeout);
+			if (std::holds_alternative<std::monostate>(state.m_value)) return nullptr;
+			if (std::holds_alternative<TResult>(state.m_value)) return &std::get<TResult>(state.m_value);
+			std::rethrow_exception(std::get<std::exception_ptr>(state.m_value));
 		}
 
 		/**
          * \brief Synchronously try get the result. If the promise is rejected the rejecting exception gets thrown.
          * \return TResult* Pointer to the result value or nullptr on timeout
          */
-		std::pair<TResult*, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			if (std::holds_alternative<std::monostate>(s.m_value)) return {nullptr, nullptr};
-			if (std::holds_alternative<TResult>(s.m_value))
-				return {&std::get<TResult>(s.m_value), nullptr};
-			else
-				return {nullptr, std::get<std::exception_ptr>(s.m_value)};
+		std::pair<TResult*, std::exception_ptr> try_get([[maybe_unused]] std::nothrow_t tag) const noexcept {
+			auto& state = *m_state;
+			std::unique_lock lck{state.m_mtx};
+			if (std::holds_alternative<std::monostate>(state.m_value)) return {nullptr, nullptr};
+			if (std::holds_alternative<TResult>(state.m_value)) return {&std::get<TResult>(state.m_value), nullptr};
+			return {nullptr, std::get<std::exception_ptr>(state.m_value)};
 		}
 
 		/**
@@ -247,16 +239,17 @@ namespace asyncpp {
 					std::unique_lock lck{this->m_state->m_mtx};
 					return !std::holds_alternative<std::monostate>(this->m_state->m_value);
 				}
-				bool await_suspend(coroutine_handle<void> h) noexcept {
+				bool await_suspend(coroutine_handle<void> hdl) noexcept {
 					assert(this->m_state);
-					assert(h);
+					assert(hdl);
 					std::unique_lock lck{this->m_state->m_mtx};
 					if (std::holds_alternative<std::monostate>(this->m_state->m_value)) {
 						this->m_state->m_on_result.emplace_back(
-							[h](TResult*, std::exception_ptr) mutable { h.resume(); });
+							// NOLINTNEXTLINE(performance-unnecessary-value-param)
+							[hdl](TResult*, std::exception_ptr) mutable { hdl.resume(); });
 						return true;
-					} else
-						return false;
+					}
+					return false;
 				}
 				TResult& await_resume() {
 					assert(this->m_state);
@@ -264,8 +257,7 @@ namespace asyncpp {
 					assert(!std::holds_alternative<std::monostate>(this->m_state->m_value));
 					if (std::holds_alternative<TResult>(this->m_state->m_value))
 						return std::get<TResult>(this->m_state->m_value);
-					else
-						std::rethrow_exception(std::get<std::exception_ptr>(this->m_state->m_value));
+					std::rethrow_exception(std::get<std::exception_ptr>(this->m_state->m_value));
 				}
 
 			private:
@@ -291,9 +283,9 @@ namespace asyncpp {
          * \param ex Exception to store in the rejected promise
          * \return A promise in its rejected state
          */
-		static promise make_rejected(std::exception_ptr ex) {
+		static promise make_rejected(std::exception_ptr exception) {
 			promise res;
-			res.reject(ex);
+			res.reject(exception);
 			return res;
 		}
 
@@ -322,15 +314,15 @@ namespace asyncpp {
 		*/
 		template<typename... T>
 		static promise first(promise<T>... args) {
-			promise p;
-			(args.on_result([p](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
+			promise first;
+			(args.on_result([first](typename promise<T>::result_type* res, std::exception_ptr exception) mutable {
 				if (res)
-					p.try_fulfill(std::move(*res));
+					first.try_fulfill(std::move(*res));
 				else
-					p.try_reject(ex);
+					first.try_reject(exception);
 			}),
 			 ...);
-			return p;
+			return first;
 		}
 
 		/**
@@ -346,42 +338,42 @@ namespace asyncpp {
 		template<typename... T>
 		static promise first_successful(promise<T>... args) {
 			constexpr size_t total = sizeof...(args);
-			promise p;
+			promise first;
 			auto finished = std::make_shared<size_t>(0);
-			(args.on_result([p, total, finished](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
-				std::unique_lock lck{p.m_state->m_mtx};
-				(*finished)++;
-				if (!std::holds_alternative<std::monostate>(p.m_state->m_value)) return;
-				if (res) {
-					p.m_state->m_value.template emplace<TResult>(std::move(*res));
-					p.m_state->m_cv.notify_all();
-					auto callbacks = std::move(p.m_state->m_on_result);
-					auto& res = std::get<TResult>(p.m_state->m_value);
-					lck.unlock();
-					for (auto& e : callbacks) {
-						if (e) {
-							try {
-								e(&res, nullptr);
-							} catch (...) { std::terminate(); }
-						}
-					}
-				} else if (*finished == total) {
-					p.m_state->m_value.template emplace<std::exception_ptr>(std::move(ex));
-					p.m_state->m_cv.notify_all();
-					auto callbacks = std::move(p.m_state->m_on_result);
-					auto ex = std::get<std::exception_ptr>(p.m_state->m_value);
-					lck.unlock();
-					for (auto& e : callbacks) {
-						if (e) {
-							try {
-								e(nullptr, ex);
-							} catch (...) { std::terminate(); }
-						}
-					}
-				}
-			}),
+			(args.on_result(
+				 [first, total, finished](typename promise<T>::result_type* res, std::exception_ptr exception) mutable {
+					 std::unique_lock lck{first.m_state->m_mtx};
+					 (*finished)++;
+					 if (!std::holds_alternative<std::monostate>(first.m_state->m_value)) return;
+					 if (res) {
+						 first.m_state->m_value.template emplace<TResult>(std::move(*res));
+						 first.m_state->m_cv.notify_all();
+						 auto callbacks = std::move(first.m_state->m_on_result);
+						 auto& res = std::get<TResult>(first.m_state->m_value);
+						 lck.unlock();
+						 for (auto& callback : callbacks) {
+							 if (callback) {
+								 try {
+									 callback(&res, nullptr);
+								 } catch (...) { std::terminate(); }
+							 }
+						 }
+					 } else if (*finished == total) {
+						 first.m_state->m_value.template emplace<std::exception_ptr>(exception);
+						 first.m_state->m_cv.notify_all();
+						 auto callbacks = std::move(first.m_state->m_on_result);
+						 lck.unlock();
+						 for (auto& callback : callbacks) {
+							 if (callback) {
+								 try {
+									 callback(nullptr, exception);
+								 } catch (...) { std::terminate(); }
+							 }
+						 }
+					 }
+				 }),
 			 ...);
-			return p;
+			return first;
 		}
 
 		/**
@@ -393,22 +385,24 @@ namespace asyncpp {
 		* 			the order they are passed once all are finished.
 		*/
 		static promise<std::vector<promise<TResult>>> all(std::vector<promise<TResult>> args) {
-			struct state {
+			struct all_state {
 				size_t total{};
 				std::atomic<size_t> count{};
 				std::vector<promise<TResult>> promises;
 				promise<std::vector<promise<TResult>>> result;
 			};
-			auto s = std::make_shared<state>();
-			s->total = args.size();
-			s->promises = std::move(args);
-			for (auto& e : s->promises) {
-				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
-					auto curid = s->count.fetch_add(1);
-					if (curid + 1 == s->total) { s->result.fulfill(std::move(s->promises)); }
-				});
+			auto state = std::make_shared<all_state>();
+			state->total = args.size();
+			state->promises = std::move(args);
+			for (auto& promise : state->promises) {
+				promise.on_result(
+					// NOLINTNEXTLINE(performance-unnecessary-value-param)
+					[state]([[maybe_unused]] TResult* res, [[maybe_unused]] std::exception_ptr exception) mutable {
+						auto curid = state->count.fetch_add(1);
+						if (curid + 1 == state->total) { state->result.fulfill(std::move(state->promises)); }
+					});
 			}
-			return s->result;
+			return state->result;
 		}
 
 		/**
@@ -420,30 +414,30 @@ namespace asyncpp {
 		* \return A promise that gets fulfilled with a vector of all values in the order of finishing.
 		*/
 		static promise<std::vector<TResult>> all_values(std::vector<promise<TResult>> args) {
-			struct state {
+			struct all_state {
 				std::mutex mtx{};
 				size_t total{};
 				size_t count{};
 				std::vector<TResult> results;
 				promise<std::vector<TResult>> done;
 			};
-			auto s = std::make_shared<state>();
-			s->total = args.size();
-			s->results.reserve(args.size());
-			for (auto& e : args) {
-				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
-					std::unique_lock lck{s->mtx};
-					s->count++;
-					if (!s->done.is_pending()) return;
-					if (ex) {
-						s->done.reject(ex);
+			auto state = std::make_shared<all_state>();
+			state->total = args.size();
+			state->results.reserve(args.size());
+			for (auto& promise : args) {
+				promise.on_result([state](TResult* res, std::exception_ptr exception) mutable {
+					std::unique_lock lck{state->mtx};
+					state->count++;
+					if (!state->done.is_pending()) return;
+					if (exception) {
+						state->done.reject(exception);
 					} else {
-						s->results.push_back(*res);
-						if (s->count == s->total) s->done.fulfill(std::move(s->results));
+						state->results.push_back(*res);
+						if (state->count == state->total) state->done.fulfill(std::move(state->results));
 					}
 				});
 			}
-			return s->done;
+			return state->done;
 		}
 	};
 } // namespace asyncpp

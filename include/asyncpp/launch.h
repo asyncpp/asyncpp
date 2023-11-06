@@ -42,14 +42,14 @@ namespace asyncpp {
 	void launch(Awaitable&& awaitable, const Allocator& allocator = {}) {
 		[](std::decay_t<Awaitable> awaitable, const Allocator&) -> detail::launch_task<Allocator> {
 			co_await std::move(awaitable);
-		}(std::move(awaitable), allocator);
+		}(std::forward<Awaitable>(awaitable), allocator);
 	}
 
 	/**
 	 * \brief Holder class for spawning child tasks. Allows waiting for all of them to finish.
 	 */
 	class async_launch_scope {
-		std::atomic<size_t> m_count{0u};
+		std::atomic<size_t> m_count{0U};
 		std::atomic<void*> m_continuation{};
 
 	public:
@@ -72,13 +72,13 @@ namespace asyncpp {
 					// If this is the last task
 					if (scope->m_count.fetch_sub(1) == 1) {
 						// And we are being awaited
-						auto hdl = scope->m_continuation.exchange(nullptr);
+						auto* hdl = scope->m_continuation.exchange(nullptr);
 						// Resume the awaiter
 						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
 					}
 				}};
 				co_await std::move(awaitable);
-			}(this, std::move(awaitable), allocator);
+			}(this, std::forward<Awaitable>(awaitable), allocator);
 		}
 
 		/**
@@ -92,13 +92,13 @@ namespace asyncpp {
 			requires(std::is_invocable_v<Callable, Args...>)
 		void invoke_tuple(Callable&& callable, std::tuple<Args...>&& args, const Allocator& allocator = {}) {
 			[](async_launch_scope* scope, Callable callable, std::tuple<Args...>&& args,
-			   const Allocator& allocator) -> detail::launch_task<Allocator> {
+			   const Allocator&) -> detail::launch_task<Allocator> {
 				scope->m_count.fetch_add(1);
 				scope_guard guard{[scope]() noexcept {
 					// If this is the last task
 					if (scope->m_count.fetch_sub(1) == 1) {
 						// And we are being awaited
-						auto hdl = scope->m_continuation.exchange(nullptr);
+						auto* hdl = scope->m_continuation.exchange(nullptr);
 						// Resume the awaiter
 						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
 					}
@@ -127,11 +127,11 @@ namespace asyncpp {
 		[[nodiscard]] auto join() noexcept {
 			struct awaiter {
 				async_launch_scope* m_scope;
-				bool await_ready() noexcept {
+				[[nodiscard]] bool await_ready() const noexcept {
 					// Dont wait if theres nothing to await
 					return m_scope->m_count.load() == 0;
 				}
-				bool await_suspend(coroutine_handle<> hdl) const {
+				[[nodiscard]] bool await_suspend(coroutine_handle<> hdl) const {
 					// Set our coroutine if there is noone waiting
 					void* expected = nullptr;
 					if (!m_scope->m_continuation.compare_exchange_strong(expected, hdl.address()))
@@ -166,11 +166,11 @@ namespace asyncpp {
 		 * \brief Returns the number of active task on this scope
 		 * \warning Only use this value for informational purposes, it might change at any time.
 		 */
-		size_t inflight_coroutines() const noexcept { return m_count.load(std::memory_order::relaxed); }
+		[[nodiscard]] size_t inflight_coroutines() const noexcept { return m_count.load(std::memory_order::relaxed); }
 
 		/**
 		 * \brief Returns true if there is no active task currently running on this scope
 		 */
-		bool all_done() const noexcept { return inflight_coroutines() == 0; }
+		[[nodiscard]] bool all_done() const noexcept { return inflight_coroutines() == 0; }
 	};
 } // namespace asyncpp

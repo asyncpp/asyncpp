@@ -17,8 +17,8 @@ namespace asyncpp {
 			using reference_type = std::conditional_t<std::is_reference_v<T>, T, T&>;
 			using pointer_type = std::add_pointer_t<value_type>;
 
-			generator_promise() noexcept {}
-			~generator_promise() {}
+			generator_promise() noexcept = default;
+			~generator_promise() = default;
 			generator_promise(const generator_promise&) = delete;
 			generator_promise(generator_promise&&) = delete;
 
@@ -45,7 +45,7 @@ namespace asyncpp {
 
 			pointer_type value() const noexcept { return m_value; }
 
-			std::exception_ptr exception() const noexcept { return m_exception; }
+			[[nodiscard]] std::exception_ptr exception() const noexcept { return m_exception; }
 
 			// co_await is not supported in a synchronous generator
 			template<typename U>
@@ -72,13 +72,13 @@ namespace asyncpp {
 			constexpr generator_iterator() noexcept : m_coro{nullptr} {}
 			explicit constexpr generator_iterator(handle_t hdl) noexcept : m_coro{hdl} {}
 
-			bool operator==(generator_end) const noexcept { return !m_coro || m_coro.done(); }
+			bool operator==([[maybe_unused]] generator_end tag) const noexcept { return !m_coro || m_coro.done(); }
 
 			generator_iterator& operator++() {
 				m_coro.resume();
 				if (m_coro.done()) {
-					auto ex = m_coro.promise().exception();
-					if (ex) std::rethrow_exception(ex);
+					auto exception = m_coro.promise().exception();
+					if (exception) std::rethrow_exception(exception);
 				}
 				return *this;
 			}
@@ -95,18 +95,18 @@ namespace asyncpp {
 		};
 
 		template<typename T, ByteAllocator Allocator>
-		inline bool operator!=(const generator_iterator<T, Allocator>& it, generator_end s) noexcept {
-			return !(it == s);
+		inline bool operator!=(const generator_iterator<T, Allocator>& iterator, generator_end tag) noexcept {
+			return !(iterator == tag);
 		}
 
 		template<typename T, ByteAllocator Allocator>
-		inline bool operator==(generator_end s, const generator_iterator<T, Allocator>& it) noexcept {
-			return it == s;
+		inline bool operator==(generator_end tag, const generator_iterator<T, Allocator>& iterator) noexcept {
+			return iterator == tag;
 		}
 
 		template<typename T, ByteAllocator Allocator>
-		inline bool operator!=(generator_end s, const generator_iterator<T, Allocator>& it) noexcept {
-			return it != s;
+		inline bool operator!=(generator_end tag, const generator_iterator<T, Allocator>& iterator) noexcept {
+			return iterator != tag;
 		}
 	} // namespace detail
 
@@ -122,6 +122,7 @@ namespace asyncpp {
 		using iterator = detail::generator_iterator<T, Allocator>;
 
 		generator() noexcept : m_coro{nullptr} {}
+		// NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
 		generator(coroutine_handle<promise_type> coro) noexcept : m_coro{coro} {}
 		generator(generator&& other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
 		generator(const generator&) = delete;
@@ -137,13 +138,13 @@ namespace asyncpp {
 			if (m_coro) {
 				m_coro.resume();
 				if (m_coro.done()) {
-					auto ex = m_coro.promise().exception();
-					if (ex) std::rethrow_exception(ex);
+					auto exception = m_coro.promise().exception();
+					if (exception) std::rethrow_exception(exception);
 				}
 			}
 			return iterator{m_coro};
 		}
-		constexpr detail::generator_end end() const noexcept { return {}; }
+		[[nodiscard]] constexpr detail::generator_end end() const noexcept { return {}; }
 
 	private:
 		coroutine_handle<promise_type> m_coro;

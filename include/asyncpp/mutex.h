@@ -30,7 +30,8 @@ namespace asyncpp {
 		/// \brief Construct mutex in its unlocked state
 		constexpr mutex() noexcept : m_state{state_unlocked}, m_awaiters{nullptr} {}
 		/// \brief Construct mutex in its locked state
-		constexpr mutex(construct_locked_t) noexcept : m_state{state_locked_no_waiters}, m_awaiters{nullptr} {}
+		explicit constexpr mutex([[maybe_unused]] construct_locked_t tag) noexcept
+			: m_state{state_locked_no_waiters}, m_awaiters{nullptr} {}
 		/**
          * \brief Destruct mutex
          *
@@ -82,7 +83,9 @@ namespace asyncpp {
          * \brief Query if the lock is currently locked
          * \warning This is unreliable if the mutex is used in multiple preemtive threads.
          */
-		bool is_locked() const noexcept { return m_state.load(std::memory_order::relaxed) != state_unlocked; }
+		[[nodiscard]] bool is_locked() const noexcept {
+			return m_state.load(std::memory_order::relaxed) != state_unlocked;
+		}
 
 	private:
 		static constexpr std::uintptr_t state_locked_no_waiters = 0;
@@ -95,9 +98,9 @@ namespace asyncpp {
 		class mutex* mutex;
 		lock_awaiter* next{nullptr};
 		coroutine_handle<> handle{};
-		constexpr bool await_ready() const noexcept { return false; }
-		bool await_suspend(coroutine_handle<> h) noexcept {
-			handle = h;
+		[[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
+		bool await_suspend(coroutine_handle<> hdl) noexcept {
+			handle = hdl;
 			auto old = mutex->m_state.load(std::memory_order::acquire);
 			while (true) {
 				if (old == state_unlocked) {
@@ -105,6 +108,7 @@ namespace asyncpp {
 															 std::memory_order::relaxed))
 						return false;
 				} else {
+					// NOLINTNEXTLINE(performance-no-int-to-ptr)
 					next = reinterpret_cast<lock_awaiter*>(old);
 					if (mutex->m_state.compare_exchange_weak(old, reinterpret_cast<std::uintptr_t>(this),
 															 std::memory_order::release, std::memory_order::relaxed))
@@ -124,14 +128,14 @@ namespace asyncpp {
          * \brief Construct a mutex_lock for the given mutex, adopting the lock
          * \note Behaviour is undefined if the supplied mutex has not been locked (e.g. using try_lock()).
          */
-		mutex_lock(class mutex& mtx, std::adopt_lock_t) noexcept : m_mtx(&mtx), m_locked{true} {
+		mutex_lock(class mutex& mtx, [[maybe_unused]] std::adopt_lock_t tag) noexcept : m_mtx(&mtx), m_locked{true} {
 			assert(mtx.is_locked());
 		}
 		/**
          * \brief Construct an unlocked mutex_lock for the given mutex
          * \note Unlike std::lock_guard/unique_lock, the mutex is not locked by the constructor.
          */
-		constexpr mutex_lock(class mutex& mtx) noexcept : m_mtx(&mtx), m_locked{false} {}
+		explicit constexpr mutex_lock(class mutex& mtx) noexcept : m_mtx(&mtx), m_locked{false} {}
 		constexpr mutex_lock(const mutex_lock&) noexcept = delete;
 		constexpr mutex_lock& operator=(const mutex_lock&) noexcept = delete;
 		constexpr mutex_lock(mutex_lock&& other) noexcept : m_mtx(other.m_mtx), m_locked{other.m_locked} {
@@ -139,7 +143,7 @@ namespace asyncpp {
 			other.m_locked = false;
 		}
 		mutex_lock& operator=(mutex_lock&& other) noexcept {
-			if (m_mtx && m_locked) m_mtx->unlock();
+			if (m_mtx != nullptr && m_locked) m_mtx->unlock();
 			m_mtx = other.m_mtx;
 			other.m_mtx = nullptr;
 			m_locked = other.m_locked;
@@ -147,7 +151,7 @@ namespace asyncpp {
 			return *this;
 		}
 		~mutex_lock() {
-			if (m_mtx && m_locked) m_mtx->unlock();
+			if (m_mtx != nullptr && m_locked) m_mtx->unlock();
 		}
 
 		/**
@@ -179,10 +183,10 @@ namespace asyncpp {
          */
 		auto lock() noexcept {
 			struct awaiter {
-				mutex_lock* that;
-				mutex::lock_awaiter mutex_awaiter;
-				bool await_ready() const noexcept { return that->m_locked || mutex_awaiter.await_ready(); }
-				auto await_suspend(coroutine_handle<> h) noexcept { return mutex_awaiter.await_suspend(h); }
+				mutex_lock* that{};
+				mutex::lock_awaiter mutex_awaiter{};
+				[[nodiscard]] bool await_ready() const noexcept { return that->m_locked || mutex_awaiter.await_ready(); }
+				[[nodiscard]] auto await_suspend(coroutine_handle<> hdl) noexcept { return mutex_awaiter.await_suspend(hdl); }
 				void await_resume() const noexcept {
 					mutex_awaiter.await_resume();
 					that->m_locked = true;
@@ -192,9 +196,9 @@ namespace asyncpp {
 		}
 
 		/// \brief Check if the mutex is held by this lock
-		bool is_locked() const noexcept { return m_locked; }
+		[[nodiscard]] bool is_locked() const noexcept { return m_locked; }
 		/// \brief Get the wrapped mutex
-		class mutex& mutex() const noexcept { return *m_mtx; }
+		[[nodiscard]] class mutex& mutex() const noexcept { return *m_mtx; }
 
 	private:
 		class mutex* m_mtx;
@@ -203,8 +207,8 @@ namespace asyncpp {
 
 	struct [[nodiscard]] mutex::scoped_lock_awaiter {
 		lock_awaiter awaiter;
-		constexpr bool await_ready() const noexcept { return awaiter.await_ready(); }
-		bool await_suspend(coroutine_handle<> h) noexcept { return awaiter.await_suspend(h); }
+		[[nodiscard]] constexpr bool await_ready() const noexcept { return awaiter.await_ready(); }
+		[[nodiscard]] bool await_suspend(coroutine_handle<> hdl) noexcept { return awaiter.await_suspend(hdl); }
 		[[nodiscard]] mutex_lock await_resume() const noexcept {
 			awaiter.await_resume();
 			return mutex_lock{*awaiter.mutex, std::adopt_lock};
@@ -218,7 +222,7 @@ namespace asyncpp {
 	inline void mutex::unlock() noexcept {
 		assert(m_state.load(std::memory_order::relaxed) != state_unlocked);
 
-		auto head = m_awaiters;
+		auto* head = m_awaiters;
 		if (head == nullptr) {
 			auto old = state_locked_no_waiters;
 			const auto didrelease = m_state.compare_exchange_strong(old, state_unlocked, std::memory_order::release,
@@ -226,9 +230,10 @@ namespace asyncpp {
 			if (didrelease) return;
 			old = m_state.exchange(state_locked_no_waiters, std::memory_order::acquire);
 			assert(old != state_locked_no_waiters && old != state_unlocked);
-			auto next = reinterpret_cast<lock_awaiter*>(old);
+			//NOLINTNEXTLINE(performance-no-int-to-ptr)
+			auto* next = reinterpret_cast<lock_awaiter*>(old);
 			do {
-				auto temp = next->next;
+				auto* temp = next->next;
 				next->next = head;
 				head = next;
 				next = temp;
