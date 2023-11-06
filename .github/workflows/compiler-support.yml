@@ -59,6 +59,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      # Ubuntu 22.04 container has libstdc++13 installed which seems to be broken on ubuntu 22.04 for clang
+      - name: Uninstall libstdc++-13-dev
+        if: contains(matrix.compiler.runs-on, 'ubuntu-2204_clang')
+        run: apt autoremove libstdc++-13-dev
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON -DASYNCPP_WITH_TSAN=OFF
