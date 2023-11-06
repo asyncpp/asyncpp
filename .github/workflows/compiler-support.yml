@@ -64,9 +64,7 @@ jobs:
         if: (matrix.compiler.tag == 'ubuntu-2204_clang-14') || (matrix.compiler.tag == 'ubuntu-2204_clang-13')
         run: |
           sudo apt autoremove libstdc++-13-dev gcc-13 libgcc-13-dev
-          sudo apt install libstdc++-12-dev
-          $CXX -v
-          dpkg -S /usr/lib/gcc/x86_64-linux-gnu/13
+          sudo apt install libstdc++-12-dev gcc-12 libgcc-12-dev
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON -DASYNCPP_WITH_TSAN=OFF
