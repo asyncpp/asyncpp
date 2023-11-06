@@ -10,32 +10,29 @@ namespace asyncpp {
 	class task;
 
 	namespace detail {
-		template<class TVal, ByteAllocator Allocator, class TPromise>
+		template<class TVal, ByteAllocator Allocator>
 		class task_promise_base : public promise_allocator_base<Allocator> {
 		public:
-			task_promise_base() noexcept {}
-			~task_promise_base() {}
+			task_promise_base() noexcept = default;
+			~task_promise_base() = default;
 			task_promise_base(const task_promise_base&) = delete;
 			task_promise_base(task_promise_base&&) = delete;
 			task_promise_base& operator=(const task_promise_base&) = delete;
 			task_promise_base& operator=(task_promise_base&&) = delete;
 
-			coroutine_handle<TPromise> get_return_object() noexcept {
-				return coroutine_handle<TPromise>::from_promise(*static_cast<TPromise*>(this));
-			}
-
 			suspend_always initial_suspend() { return {}; }
 			auto final_suspend() noexcept {
 				struct awaiter {
+					task_promise_base* that;
 					constexpr bool await_ready() noexcept { return false; }
-					auto await_suspend(coroutine_handle<TPromise> h) noexcept {
-						assert(h);
-						assert(h.promise().m_continuation);
-						return h.promise().m_continuation;
+					auto await_suspend([[maybe_unused]] coroutine_handle<void> hdl) noexcept {
+						assert(that != nullptr);
+						assert(that->m_continuation != nullptr);
+						return that->m_continuation;
 					}
 					constexpr void await_resume() noexcept {}
 				};
-				return awaiter{};
+				return awaiter{this};
 			}
 
 			void unhandled_exception() noexcept {
@@ -53,24 +50,29 @@ namespace asyncpp {
 		};
 
 		template<class T, ByteAllocator Allocator>
-		class task_promise : public task_promise_base<T, Allocator, task_promise<T, Allocator>> {
+		class task_promise : public task_promise_base<T, Allocator> {
 		public:
 			template<class U>
 			void return_value(U&& value)
 				requires(std::is_convertible_v<U, T>)
 			{
-				this->m_value.template emplace<T>(std::move(value));
+				this->m_value.template emplace<T>(std::forward<U>(value));
 			}
 			T get() { return this->rethrow_if_exception(); }
+			coroutine_handle<task_promise> get_return_object() noexcept {
+				return coroutine_handle<task_promise>::from_promise(*this);
+			}
 		};
 
 		struct returned {};
 		template<ByteAllocator Allocator>
-		class task_promise<void, Allocator>
-			: public task_promise_base<returned, Allocator, task_promise<void, Allocator>> {
+		class task_promise<void, Allocator> : public task_promise_base<returned, Allocator> {
 		public:
 			void return_void() { this->m_value.template emplace<returned>(); }
 			void get() { this->rethrow_if_exception(); }
+			coroutine_handle<task_promise> get_return_object() noexcept {
+				return coroutine_handle<task_promise>::from_promise(*this);
+			}
 		};
 	} // namespace detail
 
@@ -87,13 +89,14 @@ namespace asyncpp {
 		using handle_t = coroutine_handle<promise_type>;
 
 		/// \brief Construct from handle
-		task(handle_t h) noexcept : m_coro(h) {
+		// NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+		task(handle_t hdl) noexcept : m_coro(hdl) {
 			assert(this->m_coro);
 			assert(!this->m_coro.done());
 		}
 
 		/// \brief Construct from nullptr. The resulting task is invalid.
-		task(std::nullptr_t) noexcept : m_coro{} {}
+		explicit task(std::nullptr_t) noexcept : m_coro{} {}
 
 		/// \brief Move constructor
 		task(task&& other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
@@ -121,10 +124,10 @@ namespace asyncpp {
 			struct awaiter {
 				constexpr explicit awaiter(handle_t coro) : m_coro(coro) {}
 				constexpr bool await_ready() noexcept { return false; }
-				auto await_suspend(coroutine_handle<void> h) noexcept {
+				auto await_suspend(coroutine_handle<void> hdl) noexcept {
 					assert(this->m_coro);
-					assert(h);
-					m_coro.promise().m_continuation = h;
+					assert(hdl);
+					m_coro.promise().m_continuation = hdl;
 					return m_coro;
 				}
 				T await_resume() {

@@ -21,8 +21,8 @@ namespace asyncpp {
 		class async_generator_yield_operation final {
 		public:
 			explicit async_generator_yield_operation(coroutine_handle<> consumer) noexcept : m_consumer(consumer) {}
-			bool await_ready() const noexcept { return false; }
-			coroutine_handle<> await_suspend([[maybe_unused]] coroutine_handle<> producer) noexcept {
+			[[nodiscard]] bool await_ready() const noexcept { return false; }
+			[[nodiscard]] coroutine_handle<> await_suspend([[maybe_unused]] coroutine_handle<> producer) noexcept {
 				return m_consumer;
 			}
 			void await_resume() noexcept {}
@@ -37,22 +37,22 @@ namespace asyncpp {
 			async_generator_promise_base() noexcept = default;
 			async_generator_promise_base(const async_generator_promise_base& other) = delete;
 			async_generator_promise_base& operator=(const async_generator_promise_base& other) = delete;
-			suspend_always initial_suspend() const noexcept { return {}; }
-			async_generator_yield_operation final_suspend() noexcept {
+			[[nodiscard]] suspend_always initial_suspend() const noexcept { return {}; }
+			[[nodiscard]] async_generator_yield_operation final_suspend() noexcept {
 				m_value = nullptr;
 				return internal_yield_value();
 			}
 			void unhandled_exception() noexcept { m_exception = std::current_exception(); }
 			void return_void() noexcept {}
-			bool finished() const noexcept { return m_value == nullptr; }
+			[[nodiscard]] bool finished() const noexcept { return m_value == nullptr; }
 			void rethrow_if_unhandled_exception() {
 				if (m_exception) { std::rethrow_exception(std::move(m_exception)); }
 			}
-			T* value() const noexcept { return m_value; }
+			[[nodiscard]] T* value() const noexcept { return m_value; }
 
 		protected:
-			async_generator_yield_operation internal_yield_value() noexcept {
-				return async_generator_yield_operation{m_consumerCoroutine};
+			[[nodiscard]] async_generator_yield_operation internal_yield_value() noexcept {
+				return async_generator_yield_operation{m_consumer};
 			}
 
 		private:
@@ -62,7 +62,7 @@ namespace asyncpp {
 			friend class async_generator_iterator<T>;
 
 			std::exception_ptr m_exception{nullptr};
-			coroutine_handle<> m_consumerCoroutine;
+			coroutine_handle<> m_consumer;
 
 		protected:
 			T* m_value;
@@ -110,14 +110,14 @@ namespace asyncpp {
 			using reference = std::add_lvalue_reference_t<T>;
 			using pointer = std::add_pointer_t<value_type>;
 
-			async_generator_iterator(std::nullptr_t) noexcept {}
-			auto operator++() noexcept {
+			explicit async_generator_iterator(std::nullptr_t) noexcept {}
+			[[nodiscard]] auto operator++() noexcept {
 				class increment_op final {
 				public:
-					increment_op(async_generator_iterator<T>& iterator) noexcept : m_iterator(iterator) {}
-					bool await_ready() const noexcept { return false; }
-					coroutine_handle<> await_suspend(coroutine_handle<> consumerCoroutine) noexcept {
-						m_iterator.m_promise->m_consumerCoroutine = consumerCoroutine;
+					explicit increment_op(async_generator_iterator<T>& iterator) noexcept : m_iterator(iterator) {}
+					[[nodiscard]] bool await_ready() const noexcept { return false; }
+					[[nodiscard]] coroutine_handle<> await_suspend(coroutine_handle<> consumer) noexcept {
+						m_iterator.m_promise->m_consumer = consumer;
 						return m_iterator.m_coro;
 					}
 					async_generator_iterator<T>& await_resume() {
@@ -136,7 +136,7 @@ namespace asyncpp {
 				};
 				return increment_op{*this};
 			}
-			reference operator*() const noexcept { return *static_cast<T*>(m_promise->value()); }
+			[[nodiscard]] reference operator*() const noexcept { return *static_cast<T*>(m_promise->value()); }
 			bool operator==(const async_generator_iterator& other) const noexcept {
 				return m_promise == other.m_promise;
 			}
@@ -165,7 +165,8 @@ namespace asyncpp {
 		using promise_type = detail::async_generator_promise<T, Allocator>;
 		using iterator = detail::async_generator_iterator<T>;
 
-		async_generator() noexcept : m_coroutine(nullptr) {}
+		constexpr async_generator() noexcept : m_coroutine(nullptr) {}
+		// NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
 		async_generator(coroutine_handle<promise_type> coro) noexcept : m_coroutine{coro} {}
 		async_generator(async_generator&& other) noexcept : m_coroutine(other.m_coroutine) {
 			other.m_coroutine = nullptr;
@@ -187,22 +188,21 @@ namespace asyncpp {
 				coroutine_handle<> m_producer{};
 
 			public:
-				begin_operation(std::nullptr_t) noexcept {}
-				begin_operation(
-					coroutine_handle<detail::async_generator_promise<T, Allocator>> producerCoroutine) noexcept
-					: m_promise(std::addressof(producerCoroutine.promise())), m_producer(producerCoroutine) {}
-				bool await_ready() const noexcept { return this->m_promise == nullptr; }
-				coroutine_handle<> await_suspend(coroutine_handle<> consumerCoroutine) noexcept {
-					m_promise->m_consumerCoroutine = consumerCoroutine;
+				explicit begin_operation(std::nullptr_t) noexcept {}
+				explicit begin_operation(
+					coroutine_handle<detail::async_generator_promise<T, Allocator>> producer) noexcept
+					: m_promise(std::addressof(producer.promise())), m_producer(producer) {}
+				[[nodiscard]] bool await_ready() const noexcept { return this->m_promise == nullptr; }
+				[[nodiscard]] coroutine_handle<> await_suspend(coroutine_handle<> consumer) noexcept {
+					m_promise->m_consumer = consumer;
 					return m_producer;
 				}
-				detail::async_generator_iterator<T> await_resume() {
-					if (this->m_promise == nullptr)
-						return {nullptr};
-					else if (this->m_promise->finished()) {
+				[[nodiscard]] detail::async_generator_iterator<T> await_resume() {
+					if (this->m_promise == nullptr) return detail::async_generator_iterator<T>{nullptr};
+					if (this->m_promise->finished()) {
 						// Completed without yielding any values.
 						this->m_promise->rethrow_if_unhandled_exception();
-						return {nullptr};
+						return detail::async_generator_iterator<T>{nullptr};
 					}
 
 					return detail::async_generator_iterator<T>{*this->m_promise, this->m_producer};
@@ -211,7 +211,7 @@ namespace asyncpp {
 			if (!m_coroutine) return begin_operation{nullptr};
 			return begin_operation{m_coroutine};
 		}
-		iterator end() noexcept { return {nullptr}; }
+		iterator end() noexcept { return iterator{nullptr}; }
 		void swap(async_generator& other) noexcept {
 			using std::swap;
 			swap(m_coroutine, other.m_coroutine);
@@ -222,7 +222,7 @@ namespace asyncpp {
 	};
 
 	template<typename T, ByteAllocator Allocator>
-	void swap(async_generator<T, Allocator>& a, async_generator<T, Allocator>& b) noexcept {
-		a.swap(b);
+	void swap(async_generator<T, Allocator>& lhs, async_generator<T, Allocator>& rhs) noexcept {
+		lhs.swap(rhs);
 	}
 } // namespace asyncpp
