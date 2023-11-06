@@ -65,6 +65,7 @@ jobs:
         run: |
           sudo apt autoremove libstdc++-13-dev
           sudo apt install libstdc++-12-dev
+          $CXX -v
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
         run: cmake -S. -Bbuild -DASYNCPP_BUILD_TEST=ON -DASYNCPP_WITH_ASAN=ON -DASYNCPP_WITH_TSAN=OFF
