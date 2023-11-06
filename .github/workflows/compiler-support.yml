@@ -11,9 +11,9 @@ jobs:
       fail-fast: false
       matrix:
         compiler:
-          - { tag: "ubuntu-2204_clang-12", name: "Ubuntu 22.04 Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2204_clang-13", name: "Ubuntu 22.04 Clang 13", cxx: "/usr/bin/clang++-13", cc: "/usr/bin/clang-13", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2204_clang-14", name: "Ubuntu 22.04 Clang 14", cxx: "/usr/bin/clang++-14", cc: "/usr/bin/clang-14", runs-on: "ubuntu-22.04" }
+          - { tag: "ubuntu-2204_clang-15", name: "Ubuntu 22.04 Clang 15", cxx: "/usr/bin/clang++-15", cc: "/usr/bin/clang-15", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2204_gcc-10", name: "Ubuntu 22.04 G++ 10", cxx: "/usr/bin/g++-10", cc: "/usr/bin/gcc-10", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2204_gcc-11", name: "Ubuntu 22.04 G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
           - { tag: "ubuntu-2004_clang-12", name: "Ubuntu 20.04 Clang 12", cxx: "/usr/bin/clang++-12", cc: "/usr/bin/clang-12", runs-on: "ubuntu-20.04" }
@@ -35,9 +35,9 @@ jobs:
       CC: ${{ matrix.compiler.cc }}
     outputs:
       # Because github wants us to suffer we need to list out every output instead of using a matrix statement or some kind of dynamic setting
-      ubuntu-2204_clang-12: ${{ steps.status.outputs.ubuntu-2204_clang-12 }}
       ubuntu-2204_clang-13: ${{ steps.status.outputs.ubuntu-2204_clang-13 }}
       ubuntu-2204_clang-14: ${{ steps.status.outputs.ubuntu-2204_clang-14 }}
+      ubuntu-2204_clang-15: ${{ steps.status.outputs.ubuntu-2204_clang-15 }}
       ubuntu-2204_gcc-10: ${{ steps.status.outputs.ubuntu-2204_gcc-10 }}
       ubuntu-2204_gcc-11: ${{ steps.status.outputs.ubuntu-2204_gcc-11 }}
       ubuntu-2004_clang-12: ${{ steps.status.outputs.ubuntu-2004_clang-12 }}
@@ -59,9 +59,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      # Ubuntu 22.04 container has libstdc++13 installed which seems to be broken on ubuntu 22.04 for clang
+      # Ubuntu 22.04 container has libstdc++13 installed which is incompatible with clang < 15 in C++20
       - name: Uninstall libstdc++-13-dev
-        if: contains(matrix.compiler.runs-on, 'ubuntu-2204_clang')
+        if: matrix.compiler.runs-on == 'ubuntu-2204_clang-14' || matrix.compiler.runs-on == 'ubuntu-2204_clang-13'
         run: apt autoremove libstdc++-13-dev
       - name: Configure
         if: contains(matrix.compiler.runs-on, 'ubuntu')
