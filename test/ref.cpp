@@ -39,7 +39,7 @@ TEST(ASYNCPP, RefCounted) {
 	ASSERT_TRUE(did_destroy);
 	did_destroy = false;
 
-	hdl = {new test()};
+	hdl = new test();
 	ASSERT_TRUE(hdl);
 	ASSERT_EQ(hdl->use_count(), 1);
 	auto ptr = hdl.release();

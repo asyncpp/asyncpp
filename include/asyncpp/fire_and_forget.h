@@ -35,8 +35,8 @@ namespace asyncpp {
 					struct awaiter {
 						promise_type* self;
 
-						constexpr bool await_ready() const noexcept { return Eager; }
-						constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+						[[nodiscard]] constexpr bool await_ready() const noexcept { return Eager; }
+						constexpr void await_suspend([[maybe_unused]] coroutine_handle<> hdl) const noexcept {}
 						constexpr void await_resume() const noexcept { self->ref(); }
 					};
 					return awaiter{this};
@@ -44,8 +44,8 @@ namespace asyncpp {
 				auto final_suspend() noexcept {
 					struct awaiter {
 						promise_type* self;
-						constexpr bool await_ready() const noexcept { return self->m_ref_count.fetch_sub(1) == 1; }
-						void await_suspend(coroutine_handle<>) const noexcept {}
+						[[nodiscard]] constexpr bool await_ready() const noexcept { return self->m_ref_count.fetch_sub(1) == 1; }
+						void await_suspend([[maybe_unused]] coroutine_handle<> hdl) const noexcept {}
 						constexpr void await_resume() const noexcept {}
 					};
 					return awaiter{this};
@@ -74,24 +74,27 @@ namespace asyncpp {
 			};
 
 			/// \brief Construct from a handle
-			fire_and_forget_task_impl(coroutine_handle<promise_type> h) noexcept : m_coro(h) {}
+			// NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+			fire_and_forget_task_impl(coroutine_handle<promise_type> hdl) noexcept : m_coro(hdl) {}
 
 			/// \brief Move constructor
-			fire_and_forget_task_impl(fire_and_forget_task_impl&& t) noexcept : m_coro(std::exchange(t.m_coro, {})) {}
+			fire_and_forget_task_impl(fire_and_forget_task_impl&& other) noexcept : m_coro(std::exchange(other.m_coro, {})) {}
 
 			/// \brief Move assignment
-			fire_and_forget_task_impl& operator=(fire_and_forget_task_impl&& t) noexcept {
-				m_coro = std::exchange(t.m_coro, m_coro);
+			fire_and_forget_task_impl& operator=(fire_and_forget_task_impl&& other) noexcept {
+				if(&other == this) return *this;
+				m_coro = std::exchange(other.m_coro, m_coro);
 				return *this;
 			}
 
-			fire_and_forget_task_impl(const fire_and_forget_task_impl& t) : m_coro{t.m_coro} {
+			fire_and_forget_task_impl(const fire_and_forget_task_impl& other) noexcept : m_coro{other.m_coro} {
 				if (m_coro) m_coro.promise().ref();
 			}
 
-			fire_and_forget_task_impl& operator=(const fire_and_forget_task_impl& t) {
+			fire_and_forget_task_impl& operator=(const fire_and_forget_task_impl& other) noexcept {
+				if(&other == this) return *this;
 				if (m_coro) m_coro.promise().unref();
-				m_coro = t.m_coro;
+				m_coro = other.m_coro;
 				if (m_coro) m_coro.promise().ref();
 				return *this;
 			}

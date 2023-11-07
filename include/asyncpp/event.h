@@ -34,7 +34,7 @@ namespace asyncpp {
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-		constexpr single_consumer_event(bool set_initially = false) noexcept
+		explicit constexpr single_consumer_event(bool set_initially = false) noexcept
 			: m_state(set_initially ? this : nullptr) {}
 #ifndef NDEBUG
 		~single_consumer_event() noexcept { assert(!is_awaited()); }
@@ -50,7 +50,7 @@ namespace asyncpp {
          * \note Do not base decisions on this value, as it might change at any time by a call to set()
          */
 		[[nodiscard]] bool is_awaited() const noexcept {
-			auto val = m_state.load(std::memory_order::acquire);
+			auto* val = m_state.load(std::memory_order::acquire);
 			return val != nullptr && val != this;
 		}
 
@@ -61,9 +61,9 @@ namespace asyncpp {
          * \return true if a coroutine has been waiting and was resumed
          */
 		bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
-			auto state = m_state.exchange(this, std::memory_order::acq_rel);
+			auto* state = m_state.exchange(this, std::memory_order::acq_rel);
 			if (state != nullptr && state != this) {
-				auto await = static_cast<awaiter*>(state);
+				auto* await = static_cast<awaiter*>(state);
 				assert(await->m_parent == this);
 				assert(await->m_handle);
 				if (await->m_dispatcher != nullptr) {
@@ -118,10 +118,10 @@ namespace asyncpp {
 		std::atomic<void*> m_state;
 
 		struct [[nodiscard]] awaiter {
-			single_consumer_event* m_parent;
+			single_consumer_event* m_parent{};
 			dispatcher* m_dispatcher{};
 			coroutine_handle<> m_handle{};
-			bool await_ready() const noexcept { return m_parent->is_set(); }
+			[[nodiscard]] bool await_ready() const noexcept { return m_parent->is_set(); }
 			bool await_suspend(coroutine_handle<> hdl) noexcept {
 				m_handle = hdl;
 				void* old_state = nullptr;
@@ -167,7 +167,7 @@ namespace asyncpp {
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-		constexpr single_consumer_auto_reset_event(bool set_initially = false) noexcept
+		explicit constexpr single_consumer_auto_reset_event(bool set_initially = false) noexcept
 			: m_state(set_initially ? this : nullptr) {}
 #ifndef NDEBUG
 		~single_consumer_auto_reset_event() noexcept { assert(!is_awaited()); }
@@ -183,7 +183,7 @@ namespace asyncpp {
          * \note Do not base decisions on this value, as it might change at any time by a call to set()
          */
 		[[nodiscard]] bool is_awaited() const noexcept {
-			auto ptr = m_state.load(std::memory_order::acquire);
+			auto* ptr = m_state.load(std::memory_order::acquire);
 			return ptr != nullptr && ptr != this;
 		}
 
@@ -194,9 +194,9 @@ namespace asyncpp {
          * \return true if a coroutine has been waiting and was resumed
          */
 		bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
-			auto state = m_state.exchange(this, std::memory_order::release);
+			auto* state = m_state.exchange(this, std::memory_order::release);
 			if (state != nullptr && state != this) {
-				auto await = static_cast<awaiter*>(state);
+				auto* await = static_cast<awaiter*>(state);
 
 				// Only modify the state if it has not been changed in between
 				state = this;
@@ -256,10 +256,10 @@ namespace asyncpp {
 		std::atomic<void*> m_state;
 
 		struct [[nodiscard]] awaiter {
-			single_consumer_auto_reset_event* m_parent;
+			single_consumer_auto_reset_event* m_parent{};
 			dispatcher* m_dispatcher{};
 			coroutine_handle<> m_handle{};
-			constexpr bool await_ready() const noexcept { return false; }
+			[[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
 			bool await_suspend(coroutine_handle<> hdl) noexcept {
 				m_handle = hdl;
 				void* old_state = nullptr;
@@ -282,7 +282,7 @@ namespace asyncpp {
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-		constexpr multi_consumer_event(bool set_initially = false) noexcept : m_state(set_initially ? this : nullptr) {}
+		explicit constexpr multi_consumer_event(bool set_initially = false) noexcept : m_state(set_initially ? this : nullptr) {}
 #ifndef NDEBUG
 		~multi_consumer_event() noexcept { assert(!is_awaited()); }
 #endif
@@ -298,7 +298,7 @@ namespace asyncpp {
          * \note Do not base decisions on this value, as it might change at any time by a call to set()
          */
 		[[nodiscard]] bool is_awaited() const noexcept {
-			auto ptr = m_state.load(std::memory_order::acquire);
+			auto* ptr = m_state.load(std::memory_order::acquire);
 			return ptr != nullptr && ptr != this;
 		}
 
@@ -309,11 +309,11 @@ namespace asyncpp {
          * \return true if a coroutine has been waiting and was resumed
          */
 		bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
-			auto state = m_state.exchange(this, std::memory_order::acq_rel);
+			auto* state = m_state.exchange(this, std::memory_order::acq_rel);
 			if (state == this) return false;
-			auto await = static_cast<awaiter*>(state);
+			auto* await = static_cast<awaiter*>(state);
 			while (await != nullptr) {
-				auto next = await->m_next;
+				auto* next = await->m_next;
 				assert(await->m_parent == this);
 				assert(await->m_handle);
 				if (await->m_dispatcher != nullptr) {
@@ -368,11 +368,11 @@ namespace asyncpp {
 		std::atomic<void*> m_state;
 
 		struct [[nodiscard]] awaiter {
-			multi_consumer_event* m_parent;
+			multi_consumer_event* m_parent{};
 			dispatcher* m_dispatcher{};
 			awaiter* m_next{nullptr};
 			coroutine_handle<> m_handle{};
-			bool await_ready() const noexcept { return m_parent->is_set(); }
+			[[nodiscard]] bool await_ready() const noexcept { return m_parent->is_set(); }
 			bool await_suspend(coroutine_handle<> hdl) noexcept {
 				m_handle = hdl;
 				void* old_state = m_parent->m_state.load(std::memory_order::acquire);
@@ -417,7 +417,7 @@ namespace asyncpp {
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-		constexpr multi_consumer_auto_reset_event(bool set_initially = false) noexcept
+		explicit constexpr multi_consumer_auto_reset_event(bool set_initially = false) noexcept
 			: m_state(set_initially ? this : nullptr) {}
 #ifndef NDEBUG
 		~multi_consumer_auto_reset_event() noexcept { assert(!is_awaited()); }
@@ -434,7 +434,7 @@ namespace asyncpp {
          * \note Do not base decisions on this value, as it might change at any time by a call to set()
          */
 		[[nodiscard]] bool is_awaited() const noexcept {
-			auto ptr = m_state.load(std::memory_order::acquire);
+			auto* ptr = m_state.load(std::memory_order::acquire);
 			return ptr != nullptr && ptr != this;
 		}
 
@@ -445,16 +445,16 @@ namespace asyncpp {
          * \return true if a coroutine has been waiting and was resumed
          */
 		bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
-			auto state = m_state.exchange(this, std::memory_order::acq_rel);
+			auto* state = m_state.exchange(this, std::memory_order::acq_rel);
 			if (state == this || state == nullptr) return false;
-			auto await = static_cast<awaiter*>(state);
+			auto* await = static_cast<awaiter*>(state);
 
 			// Only modify the state if it has not been changed in between
 			state = this;
 			m_state.compare_exchange_strong(state, nullptr, std::memory_order::acq_rel);
 
 			while (await != nullptr) {
-				auto next = await->m_next;
+				auto* next = await->m_next;
 				assert(await->m_parent == this);
 				assert(await->m_handle);
 				if (await->m_dispatcher != nullptr) {
@@ -509,11 +509,11 @@ namespace asyncpp {
 		std::atomic<void*> m_state;
 
 		struct [[nodiscard]] awaiter {
-			multi_consumer_auto_reset_event* m_parent;
+			multi_consumer_auto_reset_event* m_parent{};
 			dispatcher* m_dispatcher{};
 			awaiter* m_next{nullptr};
 			coroutine_handle<> m_handle{};
-			bool await_ready() const noexcept { return m_parent->is_set(); }
+			[[nodiscard]] bool await_ready() const noexcept { return m_parent->is_set(); }
 			bool await_suspend(coroutine_handle<> hdl) noexcept {
 				m_handle = hdl;
 				void* old_state = m_parent->m_state.load(std::memory_order::acquire);

@@ -22,9 +22,9 @@ namespace asyncpp {
 		 * \param d The dispatcher instance of this thread.
 		 * \return The previous dispatcher
 		 */
-		static dispatcher* current(dispatcher* d) {
-			const auto old = g_current_dispatcher;
-			g_current_dispatcher = d;
+		static dispatcher* current(dispatcher* new_dispatcher) {
+			auto* const old = g_current_dispatcher;
+			g_current_dispatcher = new_dispatcher;
 			return old;
 		}
 
@@ -35,7 +35,7 @@ namespace asyncpp {
          * The function gets added to the queue and is executed once all existing tasks have run.
          * \param fn Callback
          */
-		virtual void push(std::function<void()> fn) = 0;
+		virtual void push(std::function<void()> callback) = 0;
 		/**
          * Get the dispatcher associated with the current thread.
          * This can be used to shedule more tasks on the current dispatcher.

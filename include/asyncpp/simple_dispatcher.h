@@ -18,10 +18,10 @@ namespace asyncpp {
 		std::atomic<bool> done = false;
 
 	public:
-		void push(std::function<void()> fn) override {
-			if (!fn) return;
+		void push(std::function<void()> callback) override {
+			if (!callback) return;
 			std::unique_lock lck{mtx};
-			queue.emplace_back(std::move(fn));
+			queue.emplace_back(std::move(callback));
 			cv.notify_all();
 		}
 
@@ -45,10 +45,10 @@ namespace asyncpp {
 					cv.wait_for(lck, std::chrono::milliseconds(500));
 					continue;
 				}
-				auto cb = std::move(queue.front());
+				auto callback = std::move(queue.front());
 				queue.pop_front();
 				lck.unlock();
-				if (cb) cb();
+				if (callback) callback();
 			}
 			dispatcher::current(old_dispatcher);
 		}
