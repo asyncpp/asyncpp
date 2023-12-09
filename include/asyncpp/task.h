@@ -59,7 +59,13 @@ namespace asyncpp {
 			void return_value(U&& value)
 				requires(std::is_convertible_v<U, T>)
 			{
-				this->m_value.template emplace<T>(std::move(value));
+				this->m_value.template emplace<T>(std::forward<U>(value));
+			}
+			template<class U>
+			void return_value(U const& value)
+				requires(!std::is_reference_v<U>)
+			{
+				this->m_value.template emplace<T>(value);
 			}
 			T get() { return this->rethrow_if_exception(); }
 		};
