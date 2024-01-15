@@ -92,7 +92,7 @@ namespace asyncpp {
 			requires(std::is_invocable_v<Callable, Args...>)
 		void invoke_tuple(Callable&& callable, std::tuple<Args...>&& args, const Allocator& allocator = {}) {
 			[](async_launch_scope* scope, Callable callable, std::tuple<Args...>&& args,
-			   const Allocator& allocator) -> detail::launch_task<Allocator> {
+			   const Allocator&) -> detail::launch_task<Allocator> {
 				scope->m_count.fetch_add(1);
 				scope_guard guard{[scope]() noexcept {
 					// If this is the last task
