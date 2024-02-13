@@ -117,7 +117,19 @@ namespace asyncpp {
 		template<typename Callable, typename... Args>
 			requires(std::is_invocable_v<Callable, Args...>)
 		void invoke(Callable&& callable, Args&&... args) {
-			invoke_tuple(std::forward<Callable>(callable), std::forward_as_tuple<Args&&...>(args...));
+			[](async_launch_scope* scope, Callable callable, Args&&... args) -> detail::launch_task<> {
+				scope->m_count.fetch_add(1);
+				scope_guard guard{[scope]() noexcept {
+					// If this is the last task
+					if (scope->m_count.fetch_sub(1) == 1) {
+						// And we are being awaited
+						auto hdl = scope->m_continuation.exchange(nullptr);
+						// Resume the awaiter
+						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
+					}
+				}};
+				co_await callable(std::forward<Args>(args)...);
+			}(this, std::forward<Callable>(callable), std::forward<Args>(args)...);
 		}
 
 		/**
