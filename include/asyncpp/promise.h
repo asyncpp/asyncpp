@@ -4,14 +4,25 @@
 #include <cassert>
 #include <condition_variable>
 #include <cstddef>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <span>
+#include <new>
+#include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
 namespace asyncpp {
+
+	template<typename TResult>
+	class promise;
+
+	template<typename T>
+	struct is_promise : std::false_type {};
+	template<typename T>
+	struct is_promise<promise<T>> : std::true_type {};
 
 	/**
      * \brief Promise type that allows waiting for a result in both synchronous and asynchronous code.
@@ -26,6 +37,39 @@ namespace asyncpp {
 			std::vector<std::function<void(TResult*, std::exception_ptr)>> m_on_result{};
 		};
 		ref<state> m_state{};
+
+		friend class promise<void>;
+
+		struct awaiter {
+			constexpr explicit awaiter(ref<state> state) : m_state(std::move(state)) {}
+			constexpr bool await_ready() noexcept {
+				assert(this->m_state);
+				std::unique_lock lck{this->m_state->m_mtx};
+				return !std::holds_alternative<std::monostate>(this->m_state->m_value);
+			}
+			bool await_suspend(coroutine_handle<void> h) noexcept {
+				assert(this->m_state);
+				assert(h);
+				std::unique_lock lck{this->m_state->m_mtx};
+				if (std::holds_alternative<std::monostate>(this->m_state->m_value)) {
+					this->m_state->m_on_result.emplace_back([h](TResult*, std::exception_ptr) mutable { h.resume(); });
+					return true;
+				} else
+					return false;
+			}
+			TResult& await_resume() {
+				assert(this->m_state);
+				std::unique_lock lck{this->m_state->m_mtx};
+				assert(!std::holds_alternative<std::monostate>(this->m_state->m_value));
+				if (std::holds_alternative<TResult>(this->m_state->m_value))
+					return std::get<TResult>(this->m_state->m_value);
+				else
+					std::rethrow_exception(std::get<std::exception_ptr>(this->m_state->m_value));
+			}
+
+		private:
+			ref<state> m_state;
+		};
 
 	public:
 		using result_type = TResult;
@@ -166,6 +210,7 @@ namespace asyncpp {
          * \param cb Callback to invoke as soon as a result is available.
          */
 		void on_result(std::function<void(TResult*, std::exception_ptr)> cb) {
+			if (!cb) return;
 			state& s = *m_state;
 			std::unique_lock lck{s.m_mtx};
 			if (std::holds_alternative<std::monostate>(s.m_value)) {
@@ -240,39 +285,75 @@ namespace asyncpp {
          * \return TResult& Pointer to the result value
          */
 		auto operator co_await() const noexcept {
-			struct awaiter {
-				constexpr explicit awaiter(ref<state> state) : m_state(std::move(state)) {}
-				constexpr bool await_ready() noexcept {
-					assert(this->m_state);
-					std::unique_lock lck{this->m_state->m_mtx};
-					return !std::holds_alternative<std::monostate>(this->m_state->m_value);
-				}
-				bool await_suspend(coroutine_handle<void> h) noexcept {
-					assert(this->m_state);
-					assert(h);
-					std::unique_lock lck{this->m_state->m_mtx};
-					if (std::holds_alternative<std::monostate>(this->m_state->m_value)) {
-						this->m_state->m_on_result.emplace_back(
-							[h](TResult*, std::exception_ptr) mutable { h.resume(); });
-						return true;
-					} else
-						return false;
-				}
-				TResult& await_resume() {
-					assert(this->m_state);
-					std::unique_lock lck{this->m_state->m_mtx};
-					assert(!std::holds_alternative<std::monostate>(this->m_state->m_value));
-					if (std::holds_alternative<TResult>(this->m_state->m_value))
-						return std::get<TResult>(this->m_state->m_value);
-					else
-						std::rethrow_exception(std::get<std::exception_ptr>(this->m_state->m_value));
-				}
-
-			private:
-				ref<state> m_state;
-			};
 			assert(this->m_state);
 			return awaiter{m_state};
+		}
+
+		/**
+		* \brief Resolve this promise once the first of the provided promises is resolved.
+		*		  This can be used to start multiple operations and continue once the
+		*		  the first one is ready. The results of the remaining promises
+		*		  are ignored.
+		* \tparam T The type of the promises
+		* \param args The promises to wait for
+		*/
+		template<typename... T>
+		void first(promise<T>... args) {
+			(args.on_result([p = *this](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
+				if (res)
+					p.try_fulfill(std::move(*res));
+				else
+					p.try_reject(ex);
+			}),
+			 ...);
+		}
+
+		/**
+		* \brief Resolve this promise once the first promise is resolved without and exception.
+		*		  This can be used to start multiple operations
+		*		  and continue once the the first successful is ready. If none of the
+		*         promises gets fulfilled the exception of the last failed promise is returned.
+		*		  The results of the remaining promises are ignored.
+		* \tparam T The type of the promises
+		* \param args The promises to wait for
+		*/
+		template<typename... T>
+		void first_successful(promise<T>... args) {
+			auto finished = std::make_shared<size_t>(0);
+			(args.on_result(
+				 [p = *this, finished](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
+					 std::unique_lock lck{p.m_state->m_mtx};
+					 (*finished)++;
+					 if (!std::holds_alternative<std::monostate>(p.m_state->m_value)) return;
+					 if (res) {
+						 p.m_state->m_value.template emplace<TResult>(std::move(*res));
+						 p.m_state->m_cv.notify_all();
+						 auto callbacks = std::move(p.m_state->m_on_result);
+						 auto& res = std::get<TResult>(p.m_state->m_value);
+						 lck.unlock();
+						 for (auto& e : callbacks) {
+							 if (e) {
+								 try {
+									 e(&res, nullptr);
+								 } catch (...) { std::terminate(); }
+							 }
+						 }
+					 } else if (*finished == sizeof...(args)) {
+						 p.m_state->m_value.template emplace<std::exception_ptr>(std::move(ex));
+						 p.m_state->m_cv.notify_all();
+						 auto callbacks = std::move(p.m_state->m_on_result);
+						 auto ex = std::get<std::exception_ptr>(p.m_state->m_value);
+						 lck.unlock();
+						 for (auto& e : callbacks) {
+							 if (e) {
+								 try {
+									 e(nullptr, ex);
+								 } catch (...) { std::terminate(); }
+							 }
+						 }
+					 }
+				 }),
+			 ...);
 		}
 
 		/**
@@ -321,15 +402,9 @@ namespace asyncpp {
 		* \return A promise that copies the state of the first finished argument.
 		*/
 		template<typename... T>
-		static promise first(promise<T>... args) {
+		static promise make_first(promise<T>... args) {
 			promise p;
-			(args.on_result([p](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
-				if (res)
-					p.try_fulfill(std::move(*res));
-				else
-					p.try_reject(ex);
-			}),
-			 ...);
+			p.first(args...);
 			return p;
 		}
 
@@ -344,106 +419,185 @@ namespace asyncpp {
 		* \return A promise that copies the state of the first successful argument.
 		*/
 		template<typename... T>
-		static promise first_successful(promise<T>... args) {
-			constexpr size_t total = sizeof...(args);
+		static promise make_first_successful(promise<T>... args) {
 			promise p;
-			auto finished = std::make_shared<size_t>(0);
-			(args.on_result([p, total, finished](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
-				std::unique_lock lck{p.m_state->m_mtx};
-				(*finished)++;
-				if (!std::holds_alternative<std::monostate>(p.m_state->m_value)) return;
-				if (res) {
-					p.m_state->m_value.template emplace<TResult>(std::move(*res));
-					p.m_state->m_cv.notify_all();
-					auto callbacks = std::move(p.m_state->m_on_result);
-					auto& res = std::get<TResult>(p.m_state->m_value);
-					lck.unlock();
-					for (auto& e : callbacks) {
-						if (e) {
-							try {
-								e(&res, nullptr);
-							} catch (...) { std::terminate(); }
-						}
-					}
-				} else if (*finished == total) {
-					p.m_state->m_value.template emplace<std::exception_ptr>(std::move(ex));
-					p.m_state->m_cv.notify_all();
-					auto callbacks = std::move(p.m_state->m_on_result);
-					auto ex = std::get<std::exception_ptr>(p.m_state->m_value);
-					lck.unlock();
-					for (auto& e : callbacks) {
-						if (e) {
-							try {
-								e(nullptr, ex);
-							} catch (...) { std::terminate(); }
-						}
-					}
-				}
-			}),
-			 ...);
+			p.first_successful(args...);
 			return p;
 		}
 
 		/**
-		* \brief Return a promise that is fulfilled once all the specified promises are fulfilled.
-		*		  This can be used to start multiple operations in parallel and collect the results.
-		* \tparam T The type of the promises
-		* \param args The promises to wait for
-		* \return A promise that gets fulfilled with a vector of all promises in
-		* 			the order they are passed once all are finished.
-		*/
-		static promise<std::vector<promise<TResult>>> all(std::vector<promise<TResult>> args) {
-			struct state {
-				size_t total{};
-				std::atomic<size_t> count{};
-				std::vector<promise<TResult>> promises;
-				promise<std::vector<promise<TResult>>> result;
+		 * \brief Promise type to allow using promise<T> as the return value for a coroutine.
+		 * \note Promise is fairly heavy weight and as a result should not be used as a general purpose
+		 *		 return type for coroutines. Instead its intended purpose is for usage on the border to
+		 *       synchronous code.
+		 */
+		class promise_type;
+	};
+
+	/**
+     * \brief Promise type that allows waiting for a result in both synchronous and asynchronous code.
+     * \tparam TResult Type of the result
+     */
+	template<>
+	class promise<void> {
+		struct void_result {};
+		promise<void_result> m_inner;
+
+	public:
+		using result_type = void;
+
+		promise() = default;
+		promise(const promise& other) = default;
+		promise& operator=(const promise& other) = default;
+		bool is_pending() const noexcept { return m_inner.is_pending(); }
+		bool is_fulfilled() const noexcept { return m_inner.is_fulfilled(); }
+		bool is_rejected() const noexcept { return m_inner.is_rejected(); }
+		void fulfill() { m_inner.fulfill({}); }
+		bool try_fulfill() { return m_inner.try_fulfill({}); }
+		void reject(std::exception_ptr e) { m_inner.reject(std::move(e)); }
+		bool try_reject(std::exception_ptr e) { return m_inner.try_reject(std::move(e)); }
+		template<typename TException, typename... Args>
+		void reject(Args&&... args) {
+			m_inner.reject<TException>(std::forward<Args>(args)...);
+		}
+		template<typename TException, typename... Args>
+		bool try_reject(Args&&... args) {
+			return m_inner.try_reject<TException>(std::forward<Args>(args)...);
+		}
+		void on_result(std::function<void(std::exception_ptr)> cb) {
+			if (!cb) return;
+			m_inner.on_result([cb = std::move(cb)](void_result*, std::exception_ptr ex) { cb(std::move(ex)); });
+		}
+		void on_result(std::function<void(result_type*, std::exception_ptr)> cb) {
+			if (!cb) return;
+			m_inner.on_result(
+				[cb = std::move(cb)](void_result*, std::exception_ptr ex) { cb(nullptr, std::move(ex)); });
+		}
+		void get() const { m_inner.get(); }
+		template<class Rep, class Period>
+		bool get(std::chrono::duration<Rep, Period> timeout) const {
+			return m_inner.get(timeout) != nullptr;
+		}
+		std::pair<bool, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
+			auto [f, s] = m_inner.try_get(std::nothrow);
+			return {f != nullptr, std::move(s)};
+		}
+		bool try_get() const {
+			auto res = try_get(std::nothrow);
+			if (res.second) std::rethrow_exception(std::move(res.second));
+			return res.first;
+		}
+		auto operator co_await() const noexcept {
+			struct awaiter {
+				explicit awaiter(ref<promise<void_result>::state> p) : m_inner(std::move(p)) {}
+				bool await_ready() noexcept { return m_inner.await_ready(); }
+				bool await_suspend(coroutine_handle<void> h) noexcept { return m_inner.await_suspend(std::move(h)); }
+				void await_resume() { m_inner.await_resume(); }
+
+			private:
+				promise<void_result>::awaiter m_inner;
 			};
-			auto s = std::make_shared<state>();
-			s->total = args.size();
-			s->promises = std::move(args);
-			for (auto& e : s->promises) {
-				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
-					auto curid = s->count.fetch_add(1);
-					if (curid + 1 == s->total) { s->result.fulfill(std::move(s->promises)); }
-				});
-			}
-			return s->result;
+			assert(this->m_inner.m_state);
+			return awaiter{this->m_inner.m_state};
+		}
+		template<typename... T>
+		void first(promise<T>... args) {
+			return m_inner.first(args...);
+		}
+		template<typename... T>
+		void first_successful(promise<T>... args) {
+			return m_inner.first_successful(args...);
+		}
+		template<typename... T>
+		void all(promise<T>... args) {
+			struct state {
+				promise result;
+				std::atomic<size_t> count{};
+			};
+			auto s = std::make_shared<state>(*this);
+			(args.on_result([s](typename promise<T>::result_type* res, std::exception_ptr ex) mutable {
+				auto curid = s->count.fetch_add(1);
+				if (curid + 1 == sizeof...(args)) { s->result.fulfill(); }
+			}),
+			 ...);
+		}
+
+		static promise make_fulfilled() {
+			promise res;
+			res.fulfill();
+			return res;
+		}
+		static promise make_rejected(std::exception_ptr ex) {
+			promise res;
+			res.reject(ex);
+			return res;
+		}
+		template<typename TException, typename... Args>
+		static promise make_rejected(Args&&... args) {
+			promise res;
+			res.reject<TException, Args...>(std::forward<Args>(args)...);
+			return res;
+		}
+
+		template<typename... T>
+		static promise make_first(promise<T>... args) {
+			promise p;
+			p.first(args...);
+			return p;
+		}
+		template<typename... T>
+		static promise make_first_successful(promise<T>... args) {
+			promise p;
+			p.first_successful(args...);
+			return p;
+		}
+		template<typename... T>
+		static promise make_all(promise<T>... args) {
+			promise p;
+			p.all(args...);
+			return p;
 		}
 
 		/**
-		* \brief Return a promise that is fulfilled with the value of the promises once all the specified
-		*         promises are fulfilled. This can be used to start multiple operations in parallel and
-		*		  collect the results. Unlike all, the function rejects if any of the promises reject.
-		* \tparam T The type of the promises
-		* \param args The promises to wait for
-		* \return A promise that gets fulfilled with a vector of all values in the order of finishing.
-		*/
-		static promise<std::vector<TResult>> all_values(std::vector<promise<TResult>> args) {
-			struct state {
-				std::mutex mtx{};
-				size_t total{};
-				size_t count{};
-				std::vector<TResult> results;
-				promise<std::vector<TResult>> done;
-			};
-			auto s = std::make_shared<state>();
-			s->total = args.size();
-			s->results.reserve(args.size());
-			for (auto& e : args) {
-				e.on_result([s](TResult* res, std::exception_ptr ex) mutable {
-					std::unique_lock lck{s->mtx};
-					s->count++;
-					if (!s->done.is_pending()) return;
-					if (ex) {
-						s->done.reject(ex);
-					} else {
-						s->results.push_back(*res);
-						if (s->count == s->total) s->done.fulfill(std::move(s->results));
-					}
-				});
-			}
-			return s->done;
+		 * \brief Promise type to allow using promise<T> as the return value for a coroutine.
+		 * \note Promise is fairly heavy weight and as a result should not be used as a general purpose
+		 *		 return type for coroutines. Instead its intended purpose is for usage on the border to
+		 *       synchronous code.
+		 */
+		class promise_type;
+	};
+
+	template<typename T>
+	class promise<T>::promise_type {
+		promise m_promise;
+
+	public:
+		promise get_return_object() { return m_promise; }
+		std::suspend_never initial_suspend() noexcept { return {}; }
+		std::suspend_never final_suspend() noexcept { return {}; }
+		template<class U>
+		void return_value(U&& value)
+			requires(std::is_convertible_v<U, T>)
+		{
+			this->m_promise.fulfill(std::forward<U>(value));
 		}
+		template<class U>
+		void return_value(U const& value)
+			requires(!std::is_reference_v<U>)
+		{
+			this->m_promise.fulfill(value);
+		}
+		void unhandled_exception() { this->m_promise.reject(std::current_exception()); }
+	};
+
+	class promise<void>::promise_type {
+		promise m_promise;
+
+	public:
+		promise get_return_object() { return m_promise; }
+		std::suspend_never initial_suspend() noexcept { return {}; }
+		std::suspend_never final_suspend() noexcept { return {}; }
+		void return_void() { this->m_promise.fulfill(); }
+		void unhandled_exception() { this->m_promise.reject(std::current_exception()); }
 	};
 } // namespace asyncpp
