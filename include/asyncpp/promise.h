@@ -574,8 +574,8 @@ namespace asyncpp {
 
 	public:
 		promise get_return_object() { return m_promise; }
-		std::suspend_never initial_suspend() noexcept { return {}; }
-		std::suspend_never final_suspend() noexcept { return {}; }
+		suspend_never initial_suspend() noexcept { return {}; }
+		suspend_never final_suspend() noexcept { return {}; }
 		template<class U>
 		void return_value(U&& value)
 			requires(std::is_convertible_v<U, T>)
@@ -596,8 +596,8 @@ namespace asyncpp {
 
 	public:
 		promise get_return_object() { return m_promise; }
-		std::suspend_never initial_suspend() noexcept { return {}; }
-		std::suspend_never final_suspend() noexcept { return {}; }
+		suspend_never initial_suspend() noexcept { return {}; }
+		suspend_never final_suspend() noexcept { return {}; }
 		void return_void() { this->m_promise.fulfill(); }
 		void unhandled_exception() { this->m_promise.reject(std::current_exception()); }
 	};
