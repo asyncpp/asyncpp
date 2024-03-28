@@ -382,12 +382,10 @@ TEST(ASYNCPP, PromiseTryGet) {
 }
 
 TEST(ASYNCPP, PromiseAsCoroutineType) {
-	auto p = []()->promise<int> {
-		co_return 42;
-	}();
+	auto p = []() -> promise<int> { co_return 42; }();
 	ASSERT_EQ(p.get(), 42);
-	
-	p = []()->promise<int> {
+
+	p = []() -> promise<int> {
 		throw std::logic_error("");
 		co_return 0;
 	}();
@@ -395,12 +393,10 @@ TEST(ASYNCPP, PromiseAsCoroutineType) {
 }
 
 TEST(ASYNCPP, PromiseAsCoroutineTypeVoid) {
-	auto p = []()->promise<void> {
-		co_return;
-	}();
+	auto p = []() -> promise<void> { co_return; }();
 	p.get();
-	
-	p = []()->promise<void> {
+
+	p = []() -> promise<void> {
 		throw std::logic_error("");
 		co_return;
 	}();
