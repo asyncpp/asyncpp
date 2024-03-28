@@ -1,4 +1,3 @@
-#include "debug_allocator.h"
 #include <asyncpp/promise.h>
 #include <asyncpp/sync_wait.h>
 #include <chrono>
@@ -259,7 +258,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise<int>::make_first(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.fulfill(42);
 		ASSERT_TRUE(pall.is_fulfilled());
@@ -268,7 +267,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise<int>::make_first(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p2.fulfill(42);
 		ASSERT_TRUE(pall.is_fulfilled());
@@ -277,7 +276,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise<int>::make_first(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.reject<int>(42);
 		ASSERT_TRUE(pall.is_rejected());
@@ -293,7 +292,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise<int>::make_first(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p2.reject<int>(42);
 		ASSERT_TRUE(pall.is_rejected());
@@ -312,7 +311,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first_successful(p1, p2);
+		auto pall = promise<int>::make_first_successful<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.fulfill(42);
 		ASSERT_TRUE(pall.is_fulfilled());
@@ -323,7 +322,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first_successful(p1, p2);
+		auto pall = promise<int>::make_first_successful<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.reject<int>(43);
 		ASSERT_TRUE(pall.is_pending());
@@ -334,7 +333,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first_successful(p1, p2);
+		auto pall = promise<int>::make_first_successful<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p2.reject<int>(43);
 		ASSERT_TRUE(pall.is_pending());
@@ -353,7 +352,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 
 TEST(ASYNCPP, PromiseAll) {
 	promise<int> p1, p2;
-	auto all = promise<int>::all({p1, p2});
+	auto all = promise<void>::make_all(p1, p2);
 	ASSERT_TRUE(p1.is_pending());
 	ASSERT_TRUE(p2.is_pending());
 	ASSERT_TRUE(all.is_pending());
@@ -365,24 +364,6 @@ TEST(ASYNCPP, PromiseAll) {
 	ASSERT_FALSE(p1.is_pending());
 	ASSERT_FALSE(p2.is_pending());
 	ASSERT_FALSE(all.is_pending());
-}
-
-TEST(ASYNCPP, PromiseAllValues) {
-	promise<int> p1, p2;
-	auto all = promise<int>::all_values({p1, p2});
-	ASSERT_TRUE(p1.is_pending());
-	ASSERT_TRUE(p2.is_pending());
-	ASSERT_TRUE(all.is_pending());
-	p1.fulfill(1);
-	ASSERT_FALSE(p1.is_pending());
-	ASSERT_TRUE(p2.is_pending());
-	ASSERT_TRUE(all.is_pending());
-	p2.fulfill(2);
-	ASSERT_FALSE(p1.is_pending());
-	ASSERT_FALSE(p2.is_pending());
-	ASSERT_FALSE(all.is_pending());
-	ASSERT_EQ(all.get()[0], 1);
-	ASSERT_EQ(all.get()[1], 2);
 }
 
 TEST(ASYNCPP, PromiseTryGet) {
@@ -398,4 +379,26 @@ TEST(ASYNCPP, PromiseTryGet) {
 	auto res = p.try_get(std::nothrow);
 	ASSERT_EQ(res.first, nullptr);
 	ASSERT_NE(res.second, nullptr);
+}
+
+TEST(ASYNCPP, PromiseAsCoroutineType) {
+	auto p = []() -> promise<int> { co_return 42; }();
+	ASSERT_EQ(p.get(), 42);
+
+	p = []() -> promise<int> {
+		throw std::logic_error("");
+		co_return 0;
+	}();
+	ASSERT_THROW(p.get(), std::logic_error);
+}
+
+TEST(ASYNCPP, PromiseAsCoroutineTypeVoid) {
+	auto p = []() -> promise<void> { co_return; }();
+	p.get();
+
+	p = []() -> promise<void> {
+		throw std::logic_error("");
+		co_return;
+	}();
+	ASSERT_THROW(p.get(), std::logic_error);
 }
