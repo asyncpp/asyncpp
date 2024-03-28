@@ -511,6 +511,7 @@ namespace asyncpp {
 		template<typename... T>
 		void all(promise<T>... args) {
 			struct state {
+				state(promise p) noexcept : result(std::move(p)) {}
 				promise result;
 				std::atomic<size_t> count{};
 			};
