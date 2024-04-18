@@ -26,6 +26,9 @@
 #include <unistd.h>
 
 #ifdef ASYNCPP_FIBER_USE_UCONTEXT
+#ifdef __APPLE__
+#define _XOPEN_SOURCE 600
+#endif
 #include <ucontext.h>
 #endif
 
