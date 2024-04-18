@@ -938,11 +938,11 @@ namespace asyncpp {
 		auto await() & {
 			if (!m_result) throw std::logic_error("empty fiber");
 			struct awaiter {
-				decltype(m_base.operator co_await()) m_base;
+				decltype(m_base.operator co_await()) m_awaiter;
 				std::optional<TReturn>* m_result;
-				bool await_ready() const noexcept { return m_base.await_ready(); }
+				bool await_ready() const noexcept { return m_awaiter.await_ready(); }
 				coroutine_handle<> await_suspend(coroutine_handle<> hdl) const noexcept {
-					return m_base.await_suspend(hdl);
+					return m_awaiter.await_suspend(hdl);
 				}
 				auto await_resume() const noexcept {
 					assert(m_result->has_value());
@@ -955,11 +955,11 @@ namespace asyncpp {
 		auto await() && {
 			if (!m_result) throw std::logic_error("empty fiber");
 			struct awaiter {
-				decltype(m_base.operator co_await()) m_base;
+				decltype(m_base.operator co_await()) m_awaiter;
 				std::optional<TReturn>* m_result;
-				bool await_ready() const noexcept { return m_base.await_ready(); }
+				bool await_ready() const noexcept { return m_awaiter.await_ready(); }
 				coroutine_handle<> await_suspend(coroutine_handle<> hdl) const noexcept {
-					return m_base.await_suspend(hdl);
+					return m_awaiter.await_suspend(hdl);
 				}
 				auto await_resume() const noexcept {
 					assert(m_result->has_value());

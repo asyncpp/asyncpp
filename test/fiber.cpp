@@ -184,7 +184,7 @@ TEST(ASYNCPP, FiberHandleSuspendReturnHandle) {
 			}
 			auto await_suspend(coroutine_handle<>) const noexcept {
 				suspend_called++;
-				return coroutine_handle<>::from_address(&dummy_handle);
+				return coroutine_handle<>::from_address(static_cast<void*>(&dummy_handle));
 			}
 			void await_resume() const noexcept { resume_called++; }
 		};
