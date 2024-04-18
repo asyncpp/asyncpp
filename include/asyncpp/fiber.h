@@ -27,7 +27,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#ifdef ASYNCPP_FIBER_USE_UCONTEXT
+#ifndef ASYNCPP_FIBER_USE_UCONTEXT
 #define ASYNCPP_FIBER_USE_UCONTEXT 0
 #endif
 
