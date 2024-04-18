@@ -52,7 +52,7 @@ namespace asyncpp::detail {
 		const auto alloc_size = size + pagesize * 2;
 #if defined(MAP_STACK)
 		void* const stack = ::mmap(0, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-#elif defined(MAP_ANON)
+#elif defined(MAP_ANON) || defined(__APPLE__)
 		void* const stack = ::mmap(0, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 #else
 		void* const stack = ::mmap(0, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
