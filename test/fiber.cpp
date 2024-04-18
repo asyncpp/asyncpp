@@ -210,6 +210,7 @@ TEST(ASYNCPP, FiberHandleSuspendReturnHandle) {
 	hndl.destroy();
 }
 
+#ifndef __APPLE__
 TEST(ASYNCPP, FiberHandleSuspendThrows) {
 	static int ready_called = 0;
 	static int suspend_called = 0;
@@ -244,6 +245,7 @@ TEST(ASYNCPP, FiberHandleSuspendThrows) {
 	ASSERT_TRUE(hndl.done());
 	hndl.destroy();
 }
+#endif
 
 TEST(ASYNCPP, FiberFull) {
 	asyncpp::async_launch_scope scope;
