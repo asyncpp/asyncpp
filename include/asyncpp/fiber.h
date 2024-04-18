@@ -16,6 +16,10 @@
 #define ASYNCPP_FIBER_KEYWORDS 1
 #endif
 
+#ifdef __APPLE__
+#define ASYNCPP_FIBER_USE_UCONTEXT
+#endif
+
 #ifndef _WIN32
 
 #include <sys/mman.h>
