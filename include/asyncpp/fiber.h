@@ -16,8 +16,10 @@
 #define ASYNCPP_FIBER_KEYWORDS 1
 #endif
 
+#ifndef ASYNCPP_FIBER_USE_UCONTEXT
 #ifdef __APPLE__
-#define ASYNCPP_FIBER_USE_UCONTEXT
+#define ASYNCPP_FIBER_USE_UCONTEXT 1
+#endif
 #endif
 
 #ifndef _WIN32
@@ -26,9 +28,10 @@
 #include <unistd.h>
 
 #ifdef ASYNCPP_FIBER_USE_UCONTEXT
-#ifdef __APPLE__
-#define _XOPEN_SOURCE 600
+#define ASYNCPP_FIBER_USE_UCONTEXT 0
 #endif
+
+#if ASYNCPP_FIBER_USE_UCONTEXT
 #include <ucontext.h>
 #endif
 
@@ -81,7 +84,7 @@ namespace asyncpp::detail {
 		return res == 0;
 	}
 
-#ifdef ASYNCPP_FIBER_USE_UCONTEXT
+#if ASYNCPP_FIBER_USE_UCONTEXT
 	struct fiber_context {
 		ucontext_t context;
 		void* stack;
