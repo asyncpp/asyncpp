@@ -31,7 +31,7 @@ if(ASYNCPP_BUILD_TEST)
     FetchContent_Declare(
       googletest
       GIT_REPOSITORY https://github.com/google/googletest.git
-      GIT_TAG release-1.12.1)
+      GIT_TAG v1.14.0)
     if(WIN32)
       set(gtest_force_shared_crt
           ON
@@ -48,6 +48,7 @@ if(ASYNCPP_BUILD_TEST)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/async_generator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/defer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/event.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/fiber.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/fire_and_forget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/generator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/launch.cpp
