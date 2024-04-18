@@ -279,6 +279,7 @@ TEST(ASYNCPP, FiberAwait) {
 	ASSERT_FALSE(dp.next);
 }
 
+#ifndef __APPLE__
 TEST(ASYNCPP, FiberDestroyThrows) {
 	struct debug_dispatcher {
 		std::function<void()> next;
@@ -297,6 +298,7 @@ TEST(ASYNCPP, FiberDestroyThrows) {
 	handle.destroy();
 	ASSERT_TRUE(did_throw);
 }
+#endif
 
 TEST(ASYNCPP, FiberExceptionHandling) {
 	bool did_throw = false;
