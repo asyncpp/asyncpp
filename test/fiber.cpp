@@ -184,7 +184,7 @@ TEST(ASYNCPP, FiberHandleSuspendReturnHandle) {
 			}
 			auto await_suspend(coroutine_handle<>) const noexcept {
 				suspend_called++;
-				return std::coroutine_handle<>::from_address(&dummy_handle);
+				return coroutine_handle<>::from_address(&dummy_handle);
 			}
 			void await_resume() const noexcept { resume_called++; }
 		};
@@ -250,8 +250,8 @@ TEST(ASYNCPP, FiberFull) {
 	scope.invoke([]() -> asyncpp::task<> {
 		fiber f([]() {
 			std::cout << "This is a stackful coroutine, yet I can still await C++20 coroutine awaiters:" << std::endl;
-			fib_await asyncpp::timer::get_default().wait(std::chrono::seconds(1));
-			std::cout << "This is printed after 1 second" << std::endl;
+			fib_await asyncpp::timer::get_default().wait(std::chrono::milliseconds(100));
+			std::cout << "This is printed after 100 milliseconds" << std::endl;
 			return 10;
 		});
 		std::cout << "You can also await stackful coroutines inside a c++20 coroutine:" << std::endl;
@@ -286,7 +286,7 @@ TEST(ASYNCPP, FiberDestroyThrows) {
 	};
 	debug_dispatcher dp;
 	bool did_throw = false;
-	auto handle = make_fiber_handle(1024, [&dp, &did_throw]() {
+	auto handle = make_fiber_handle(10240, [&dp, &did_throw]() {
 		try {
 			fib_await asyncpp::defer{dp};
 		} catch (...) { did_throw = true; }
