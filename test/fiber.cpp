@@ -297,3 +297,15 @@ TEST(ASYNCPP, FiberDestroyThrows) {
 	handle.destroy();
 	ASSERT_TRUE(did_throw);
 }
+
+TEST(ASYNCPP, FiberExceptionHandling) {
+	bool did_throw = false;
+	auto handle = make_fiber_handle(10240, [&did_throw]() {
+		try {
+			throw std::runtime_error("Hello");
+		} catch (...) { did_throw = true; }
+	});
+	handle.resume();
+	ASSERT_TRUE(did_throw);
+	handle.destroy();
+}
