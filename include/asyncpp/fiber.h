@@ -728,7 +728,7 @@ namespace asyncpp::detail {
 					auto handler = std::exchange(hndl->suspend_handler, nullptr);
 					auto ptr = std::exchange(hndl->suspend_handler_ptr, nullptr);
 					try {
-						if (handler(ptr, coroutine_handle<>::from_address(hndl))) break;
+						if (handler(ptr, coroutine_handle<>::from_address(static_cast<void*>(hndl)))) break;
 					} catch (...) { hndl->suspend_exception = std::current_exception(); }
 				}
 			}
@@ -798,7 +798,7 @@ namespace asyncpp::detail {
 			VALGRIND_STACK_REGISTER(hndl->fiber_stack.mmap_base,
 									static_cast<uint8_t*>(hndl->fiber_stack.mmap_base) + hndl->fiber_stack.mmap_size);
 #endif
-		return coroutine_handle<>::from_address(hndl);
+		return coroutine_handle<>::from_address(static_cast<void*>(hndl));
 	}
 
 	template<typename T>
