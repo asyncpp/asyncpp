@@ -301,11 +301,11 @@ namespace asyncpp::detail {
 		/* `current_pointer_out` is in `4(%ebp)`. `dest_pointer` is in `8(%ebp)`. */
 		asm("leal -0x1c(%esp), %esp\n"
 			// Save FPU state
-			"stmxcsr  (%esp)\n"	   // save MMX control- and status-word
-			"fnstcw   0x4(%esp)\n" // save x87 control-word
+			"stmxcsr  (%esp)\n"		   // save MMX control- and status-word
+			"fnstcw   0x4(%esp)\n"	   // save x87 control-word
 #ifdef SAVE_TLS_STACK_PROTECTOR
-			"movl  %gs:0x14, %ecx\n"  // read stack guard from TLS record
-			"movl  %ecx, 0x8(%esp)\n" // save stack guard
+			"movl  %gs:0x14, %ecx\n"   // read stack guard from TLS record
+			"movl  %ecx, 0x8(%esp)\n"  // save stack guard
 #endif
 			"movl  %edi, 0xc(%esp)\n"  // save EDI
 			"movl  %esi, 0x10(%esp)\n" // save ESI
@@ -318,8 +318,8 @@ namespace asyncpp::detail {
 			"mov 0x24(%esp), %esi\n" // Read second arg ...
 			"mov %esi, %esp\n"		 // ... and restore it to the stack pointer
 
-			"ldmxcsr  (%esp)\n"	   // restore MMX control- and status-word
-			"fldcw    0x4(%esp)\n" // restore x87 control-word
+			"ldmxcsr  (%esp)\n"		  // restore MMX control- and status-word
+			"fldcw    0x4(%esp)\n"	  // restore x87 control-word
 #ifdef SAVE_TLS_STACK_PROTECTOR
 			"movl  0x8(%esp), %edx\n" // load stack guard
 			"movl  %edx, %gs:0x14\n"  // restore stack guard to TLS record
@@ -340,11 +340,11 @@ namespace asyncpp::detail {
 		/* `current_pointer_out` is in `%rdi`. `dest_pointer` is in `%rsi`. */
 		asm("leaq -0x48(%rsp), %rsp\n"
 			// Save FPU state
-			"stmxcsr  (%rsp)\n"	   /* save MMX control- and status-word */
-			"fnstcw   0x4(%rsp)\n" /* save x87 control-word */
+			"stmxcsr  (%rsp)\n"		   /* save MMX control- and status-word */
+			"fnstcw   0x4(%rsp)\n"	   /* save x87 control-word */
 #ifdef SAVE_TLS_STACK_PROTECTOR
-			"movq  %fs:0x28, %rcx\n"  /* read stack guard from TLS record */
-			"movq  %rcx, 0x8(%rsp)\n" /* save stack guard */
+			"movq  %fs:0x28, %rcx\n"   /* read stack guard from TLS record */
+			"movq  %rcx, 0x8(%rsp)\n"  /* save stack guard */
 #endif
 			"movq  %r12, 0x10(%rsp)\n" // save R12
 			"movq  %r13, 0x18(%rsp)\n" // save R13
@@ -357,8 +357,8 @@ namespace asyncpp::detail {
 			// On amd64, the second argument comes from rsi.
 			"movq %rsi, %rsp\n"
 			// Restore FPU state
-			"ldmxcsr (%rsp)\n"	  // Restore MMX control- and status-word
-			"fldcw   0x4(%rsp)\n" // Restore x87 control-word
+			"ldmxcsr (%rsp)\n"		 // Restore MMX control- and status-word
+			"fldcw   0x4(%rsp)\n"	 // Restore x87 control-word
 #ifdef SAVE_TLS_STACK_PROTECTOR
 			"movq 0x8(%rsp), %rcx\n" // Restore stack guard to TLS record
 			"movq %rcx, %fs:28\n"
