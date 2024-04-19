@@ -16,12 +16,6 @@
 #define ASYNCPP_FIBER_KEYWORDS 1
 #endif
 
-#ifndef ASYNCPP_FIBER_USE_UCONTEXT
-#ifdef __APPLE__
-#define ASYNCPP_FIBER_USE_UCONTEXT 1
-#endif
-#endif
-
 #ifndef _WIN32
 
 #include <sys/mman.h>
@@ -885,7 +879,7 @@ namespace asyncpp {
 
 	public:
 		template<typename FN>
-		fiber(FN&& fn, size_t stack_size = 128 * 1024)
+		fiber(FN&& fn, size_t stack_size = 256 * 1024)
 			: m_handle(detail::make_fiber_handle(stack_size, std::forward<FN>(fn))) {}
 		constexpr fiber() noexcept : m_handle(nullptr) {}
 		~fiber() {
@@ -931,7 +925,7 @@ namespace asyncpp {
 
 	public:
 		template<typename FN>
-		fiber(FN&& fn, size_t stack_size = 128 * 1024)
+		fiber(FN&& fn, size_t stack_size = 256 * 1024)
 			: m_result(std::make_unique<std::optional<TReturn>>()),
 			  m_base([fn = std::forward<FN>(fn), res = m_result.get()]() { res->emplace(fn()); }, stack_size) {}
 		constexpr fiber() noexcept : m_result(nullptr), m_base() {}

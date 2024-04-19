@@ -15,7 +15,7 @@ TEST(ASYNCPP, Fiber) {
 	static bool fiber_arg_did_match = false;
 
 	stack_context stack;
-	ASSERT_TRUE(fiber_allocate_stack(stack, 10240));
+	ASSERT_TRUE(fiber_allocate_stack(stack, 256 * 1024));
 	ASSERT_TRUE(fiber_makecontext(
 		&fiber_ctx, stack,
 		[](void* ptr) {
@@ -47,7 +47,7 @@ TEST(ASYNCPP, FiberHandleAwaitReadyCanSkipSuspend) {
 	static int ready_called = 0;
 	static int suspend_called = 0;
 	static int resume_called = 0;
-	auto hndl = make_fiber_handle(10240, []() {
+	auto hndl = make_fiber_handle(256 * 1024, []() {
 		struct my_awaitable {
 			bool await_ready() const noexcept {
 				ready_called++;
@@ -74,7 +74,7 @@ TEST(ASYNCPP, FiberHandleSuspendIsCalled) {
 	static int ready_called = 0;
 	static int suspend_called = 0;
 	static int resume_called = 0;
-	auto hndl = make_fiber_handle(10240, []() {
+	auto hndl = make_fiber_handle(256 * 1024, []() {
 		struct my_awaitable {
 			bool await_ready() const noexcept {
 				ready_called++;
@@ -106,7 +106,7 @@ TEST(ASYNCPP, FiberHandleSuspendReturnFalse) {
 	static int ready_called = 0;
 	static int suspend_called = 0;
 	static int resume_called = 0;
-	auto hndl = make_fiber_handle(10240, []() {
+	auto hndl = make_fiber_handle(256 * 1024, []() {
 		struct my_awaitable {
 			bool await_ready() const noexcept {
 				ready_called++;
@@ -136,7 +136,7 @@ TEST(ASYNCPP, FiberHandleSuspendReturnTrue) {
 	static int ready_called = 0;
 	static int suspend_called = 0;
 	static int resume_called = 0;
-	auto hndl = make_fiber_handle(10240, []() {
+	auto hndl = make_fiber_handle(256 * 1024, []() {
 		struct my_awaitable {
 			bool await_ready() const noexcept {
 				ready_called++;
@@ -176,7 +176,7 @@ TEST(ASYNCPP, FiberHandleSuspendReturnHandle) {
 		void (*resume)(dummy_handle_t*) = [](dummy_handle_t*) { handle_resume_called++; };
 		void (*destroy)(dummy_handle_t*) = [](dummy_handle_t*) {};
 	} dummy_handle;
-	auto hndl = make_fiber_handle(10240, []() {
+	auto hndl = make_fiber_handle(256 * 1024, []() {
 		struct my_awaitable {
 			bool await_ready() const noexcept {
 				ready_called++;
@@ -210,13 +210,12 @@ TEST(ASYNCPP, FiberHandleSuspendReturnHandle) {
 	hndl.destroy();
 }
 
-#ifndef __APPLE__
 TEST(ASYNCPP, FiberHandleSuspendThrows) {
 	static int ready_called = 0;
 	static int suspend_called = 0;
 	static int resume_called = 0;
 	static int exception_caught = 0;
-	auto hndl = make_fiber_handle(10240, []() {
+	auto hndl = make_fiber_handle(256 * 1024, []() {
 		struct my_awaitable {
 			bool await_ready() const noexcept {
 				ready_called++;
@@ -245,7 +244,6 @@ TEST(ASYNCPP, FiberHandleSuspendThrows) {
 	ASSERT_TRUE(hndl.done());
 	hndl.destroy();
 }
-#endif
 
 TEST(ASYNCPP, FiberFull) {
 	asyncpp::async_launch_scope scope;
@@ -275,13 +273,12 @@ TEST(ASYNCPP, FiberAwait) {
 	}));
 	ASSERT_FALSE(scope.all_done());
 	ASSERT_TRUE(dp.next);
-	auto fn = std::move(dp.next);
+	auto fn = std::exchange(dp.next, {});
 	fn();
 	ASSERT_TRUE(scope.all_done());
 	ASSERT_FALSE(dp.next);
 }
 
-#ifndef __APPLE__
 TEST(ASYNCPP, FiberDestroyThrows) {
 	struct debug_dispatcher {
 		std::function<void()> next;
@@ -289,7 +286,7 @@ TEST(ASYNCPP, FiberDestroyThrows) {
 	};
 	debug_dispatcher dp;
 	bool did_throw = false;
-	auto handle = make_fiber_handle(10240, [&dp, &did_throw]() {
+	auto handle = make_fiber_handle(256 * 1024, [&dp, &did_throw]() {
 		try {
 			fib_await asyncpp::defer{dp};
 		} catch (...) { did_throw = true; }
@@ -300,11 +297,10 @@ TEST(ASYNCPP, FiberDestroyThrows) {
 	handle.destroy();
 	ASSERT_TRUE(did_throw);
 }
-#endif
 
 TEST(ASYNCPP, FiberExceptionHandling) {
 	bool did_throw = false;
-	auto handle = make_fiber_handle(10240, [&did_throw]() {
+	auto handle = make_fiber_handle(256 * 1024, [&did_throw]() {
 		try {
 			throw std::runtime_error("Hello");
 		} catch (...) { did_throw = true; }
