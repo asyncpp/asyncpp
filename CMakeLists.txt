@@ -4,7 +4,7 @@ project(Asyncpp)
 find_package(Threads REQUIRED)
 
 option(ASYNCPP_BUILD_TEST "Enable test builds" ON)
-option(ASYNCPP_BUILD_DOCS "Enable test builds" ON)
+option(ASYNCPP_BUILD_DOCS "Enable test builds" OFF)
 option(ASYNCPP_WITH_ASAN "Enable asan for test builds" ON)
 option(ASYNCPP_WITH_TSAN "Enable tsan for test builds" OFF)
 
