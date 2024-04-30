@@ -184,14 +184,16 @@ TEST(ASYNCPP, PromiseCallbackFulfilled) {
 	ASSERT_FALSE(p.is_pending());
 	ASSERT_TRUE(p.is_fulfilled());
 	ASSERT_FALSE(p.is_rejected());
-	bool was_called = false;
-	p.on_result([&was_called](int* res, std::exception_ptr ex) {
-		ASSERT_NE(res, nullptr);
-		ASSERT_EQ(*res, 42);
-		ASSERT_EQ(ex, nullptr);
-		was_called = true;
-	});
-	ASSERT_TRUE(was_called);
+	bool then_was_called = false;
+	bool catch_was_called = false;
+	p.then(
+		[&then_was_called](const int& res) {
+			ASSERT_EQ(res, 42);
+			then_was_called = true;
+		},
+		[&catch_was_called](const std::exception_ptr& ex) { catch_was_called = true; });
+	ASSERT_TRUE(then_was_called);
+	ASSERT_FALSE(catch_was_called);
 }
 
 TEST(ASYNCPP, PromiseCallbackRejected) {
@@ -199,18 +201,19 @@ TEST(ASYNCPP, PromiseCallbackRejected) {
 	ASSERT_FALSE(p.is_pending());
 	ASSERT_FALSE(p.is_fulfilled());
 	ASSERT_TRUE(p.is_rejected());
-	bool was_called = false;
-	p.on_result([&was_called](int* res, std::exception_ptr ex) {
-		ASSERT_EQ(res, nullptr);
-		ASSERT_NE(ex, nullptr);
-		try {
-			std::rethrow_exception(ex);
-		} catch (const std::runtime_error& e) {
-
-		} catch (...) { ASSERT_FALSE(true) << "Invalid exception received"; }
-		was_called = true;
-	});
-	ASSERT_TRUE(was_called);
+	bool then_was_called = false;
+	bool catch_was_called = false;
+	p.then([&then_was_called](const int& res) { then_was_called = true; },
+		   [&catch_was_called](const std::exception_ptr& ex) {
+			   ASSERT_NE(ex, nullptr);
+			   try {
+				   std::rethrow_exception(ex);
+			   } catch (const std::runtime_error& e) {
+			   } catch (...) { ASSERT_FALSE(true) << "Invalid exception received"; }
+			   catch_was_called = true;
+		   });
+	ASSERT_FALSE(then_was_called);
+	ASSERT_TRUE(catch_was_called);
 }
 
 TEST(ASYNCPP, PromiseCallbackFulfill) {
@@ -218,18 +221,22 @@ TEST(ASYNCPP, PromiseCallbackFulfill) {
 	ASSERT_TRUE(p.is_pending());
 	ASSERT_FALSE(p.is_fulfilled());
 	ASSERT_FALSE(p.is_rejected());
-	bool was_called = false;
-	p.on_result([&was_called](int* res, std::exception_ptr ex) {
-		ASSERT_NE(res, nullptr);
-		ASSERT_EQ(*res, 42);
-		ASSERT_EQ(ex, nullptr);
-		was_called = true;
-	});
-	ASSERT_FALSE(was_called);
+	bool then_was_called = false;
+	bool catch_was_called = false;
+	p.then(
+		[&then_was_called](const int& res) {
+			ASSERT_EQ(res, 42);
+			then_was_called = true;
+		},
+		[&catch_was_called](const std::exception_ptr& ex) { catch_was_called = true; });
+	ASSERT_FALSE(then_was_called);
+	ASSERT_FALSE(catch_was_called);
 	p.fulfill(42);
 	ASSERT_FALSE(p.is_pending());
 	ASSERT_TRUE(p.is_fulfilled());
 	ASSERT_FALSE(p.is_rejected());
+	ASSERT_TRUE(then_was_called);
+	ASSERT_FALSE(catch_was_called);
 }
 
 TEST(ASYNCPP, PromiseCallbackReject) {
@@ -237,29 +244,32 @@ TEST(ASYNCPP, PromiseCallbackReject) {
 	ASSERT_TRUE(p.is_pending());
 	ASSERT_FALSE(p.is_fulfilled());
 	ASSERT_FALSE(p.is_rejected());
-	bool was_called = false;
-	p.on_result([&was_called](int* res, std::exception_ptr ex) {
-		ASSERT_EQ(res, nullptr);
-		ASSERT_NE(ex, nullptr);
-		try {
-			std::rethrow_exception(ex);
-		} catch (const std::runtime_error& e) {
-
-		} catch (...) { ASSERT_FALSE(true) << "Invalid exception received"; }
-		was_called = true;
-	});
-	ASSERT_FALSE(was_called);
+	bool then_was_called = false;
+	bool catch_was_called = false;
+	p.then([&then_was_called](const int& res) { then_was_called = true; },
+		   [&catch_was_called](const std::exception_ptr& ex) {
+			   ASSERT_NE(ex, nullptr);
+			   try {
+				   std::rethrow_exception(ex);
+			   } catch (const std::runtime_error& e) {
+			   } catch (...) { ASSERT_FALSE(true) << "Invalid exception received"; }
+			   catch_was_called = true;
+		   });
+	ASSERT_FALSE(then_was_called);
+	ASSERT_FALSE(catch_was_called);
 	p.reject<std::runtime_error>("");
 	ASSERT_FALSE(p.is_pending());
 	ASSERT_FALSE(p.is_fulfilled());
 	ASSERT_TRUE(p.is_rejected());
+	ASSERT_FALSE(then_was_called);
+	ASSERT_TRUE(catch_was_called);
 }
 
 TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise_first<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.fulfill(42);
 		ASSERT_TRUE(pall.is_fulfilled());
@@ -268,7 +278,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise_first<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p2.fulfill(42);
 		ASSERT_TRUE(pall.is_fulfilled());
@@ -277,7 +287,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise_first<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.reject<int>(42);
 		ASSERT_TRUE(pall.is_rejected());
@@ -293,7 +303,7 @@ TEST(ASYNCPP, PromiseFirst) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first(p1, p2);
+		auto pall = promise_first<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p2.reject<int>(42);
 		ASSERT_TRUE(pall.is_rejected());
@@ -312,7 +322,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first_successful(p1, p2);
+		auto pall = promise_first_successful<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.fulfill(42);
 		ASSERT_TRUE(pall.is_fulfilled());
@@ -323,7 +333,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first_successful(p1, p2);
+		auto pall = promise_first_successful<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p1.reject<int>(43);
 		ASSERT_TRUE(pall.is_pending());
@@ -334,7 +344,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 	{
 		promise<int> p1;
 		promise<int> p2;
-		auto pall = promise<int>::first_successful(p1, p2);
+		auto pall = promise_first_successful<int>(p1, p2);
 		ASSERT_TRUE(pall.is_pending());
 		p2.reject<int>(43);
 		ASSERT_TRUE(pall.is_pending());
@@ -353,7 +363,7 @@ TEST(ASYNCPP, PromiseFirstSuccessful) {
 
 TEST(ASYNCPP, PromiseAll) {
 	promise<int> p1, p2;
-	auto all = promise<int>::all({p1, p2});
+	auto all = promise_all(p1, p2);
 	ASSERT_TRUE(p1.is_pending());
 	ASSERT_TRUE(p2.is_pending());
 	ASSERT_TRUE(all.is_pending());
@@ -365,24 +375,6 @@ TEST(ASYNCPP, PromiseAll) {
 	ASSERT_FALSE(p1.is_pending());
 	ASSERT_FALSE(p2.is_pending());
 	ASSERT_FALSE(all.is_pending());
-}
-
-TEST(ASYNCPP, PromiseAllValues) {
-	promise<int> p1, p2;
-	auto all = promise<int>::all_values({p1, p2});
-	ASSERT_TRUE(p1.is_pending());
-	ASSERT_TRUE(p2.is_pending());
-	ASSERT_TRUE(all.is_pending());
-	p1.fulfill(1);
-	ASSERT_FALSE(p1.is_pending());
-	ASSERT_TRUE(p2.is_pending());
-	ASSERT_TRUE(all.is_pending());
-	p2.fulfill(2);
-	ASSERT_FALSE(p1.is_pending());
-	ASSERT_FALSE(p2.is_pending());
-	ASSERT_FALSE(all.is_pending());
-	ASSERT_EQ(all.get()[0], 1);
-	ASSERT_EQ(all.get()[1], 2);
 }
 
 TEST(ASYNCPP, PromiseTryGet) {
@@ -398,4 +390,39 @@ TEST(ASYNCPP, PromiseTryGet) {
 	auto res = p.try_get(std::nothrow);
 	ASSERT_EQ(res.first, nullptr);
 	ASSERT_NE(res.second, nullptr);
+}
+
+TEST(ASYNCPP, PromiseVoid) {
+	promise<void> p;
+	auto val = p.try_get();
+	ASSERT_FALSE(val);
+	p.fulfill();
+	val = p.try_get();
+	ASSERT_TRUE(val);
+
+	p = promise<void>::make_rejected<int>(42);
+	ASSERT_THROW(p.try_get(), int);
+	auto res = p.try_get(std::nothrow);
+	ASSERT_TRUE(res.first);
+	ASSERT_NE(res.second, nullptr);
+}
+
+TEST(ASYNCPP, PromiseFulfillClearsRejectCallbacks) {
+	promise<void> p;
+	auto count = std::make_shared<std::monostate>();
+	ASSERT_EQ(count.use_count(), 1);
+	p.then({}, [count](const std::exception_ptr&) {});
+	ASSERT_EQ(count.use_count(), 2);
+	p.fulfill();
+	ASSERT_EQ(count.use_count(), 1);
+}
+
+TEST(ASYNCPP, PromiseRejectClearsFulfillCallbacks) {
+	promise<void> p;
+	auto count = std::make_shared<std::monostate>();
+	ASSERT_EQ(count.use_count(), 1);
+	p.then([count]() {}, {});
+	ASSERT_EQ(count.use_count(), 2);
+	p.reject<std::runtime_error>("");
+	ASSERT_EQ(count.use_count(), 1);
 }
