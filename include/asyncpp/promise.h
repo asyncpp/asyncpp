@@ -393,6 +393,7 @@ namespace asyncpp {
 		using promise<std::monostate>::is_rejected;
 		using promise<std::monostate>::reject;
 		using promise<std::monostate>::try_reject;
+		using promise<std::monostate>::on_settle;
 
 		void fulfill() { promise<std::monostate>::fulfill(std::monostate{}); }
 		bool try_fulfill() { return promise<std::monostate>::try_fulfill(std::monostate{}); }
