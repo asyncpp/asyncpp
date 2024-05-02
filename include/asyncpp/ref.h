@@ -2,7 +2,6 @@
 #include <atomic>
 #include <cassert>
 #include <compare>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -16,37 +15,37 @@ namespace asyncpp {
 	 */
 	template<typename T>
 	concept RefCount = requires() {
-						   { T{std::declval<size_t>()} };
-						   { std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
-						   { std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
-						   { std::declval<const T&>().count() } -> std::convertible_to<size_t>;
-					   };
+		{ T{std::declval<size_t>()} };
+		{ std::declval<T&>().fetch_increment() } -> std::convertible_to<size_t>;
+		{ std::declval<T&>().fetch_decrement() } -> std::convertible_to<size_t>;
+		{ std::declval<const T&>().count() } -> std::convertible_to<size_t>;
+	};
 
 	/**
 	 * \brief Threadsafe refcount policy
 	 */
 	struct thread_safe_refcount {
 		std::atomic<size_t> m_count;
-		constexpr thread_safe_refcount(size_t init_val = 0) noexcept : m_count{init_val} {}
+		explicit constexpr thread_safe_refcount(size_t init_val = 0) noexcept : m_count{init_val} {}
 		thread_safe_refcount(const thread_safe_refcount& other) = delete;
 		thread_safe_refcount& operator=(const thread_safe_refcount& other) = delete;
 
 		size_t fetch_increment() noexcept { return m_count.fetch_add(1, std::memory_order::acquire); }
-		size_t fetch_decrement() noexcept { return m_count.fetch_sub(1, std::memory_order::release); }
-		size_t count() const noexcept { return m_count.load(std::memory_order::relaxed); }
+		[[nodiscard]] size_t fetch_decrement() noexcept { return m_count.fetch_sub(1, std::memory_order::release); }
+		[[nodiscard]] size_t count() const noexcept { return m_count.load(std::memory_order::relaxed); }
 	};
 	/**
 	 * \brief Thread unsafe refcount policy
 	 */
 	struct thread_unsafe_refcount {
 		size_t m_count;
-		constexpr thread_unsafe_refcount(size_t init_val = 0) noexcept : m_count{init_val} {}
+		explicit constexpr thread_unsafe_refcount(size_t init_val = 0) noexcept : m_count{init_val} {}
 		thread_unsafe_refcount(const thread_unsafe_refcount& other) = delete;
 		thread_unsafe_refcount& operator=(const thread_unsafe_refcount& other) = delete;
 
 		size_t fetch_increment() noexcept { return m_count++; }
-		size_t fetch_decrement() noexcept { return m_count--; }
-		size_t count() const noexcept { return m_count; }
+		[[nodiscard]] size_t fetch_decrement() noexcept { return m_count--; }
+		[[nodiscard]] size_t count() const noexcept { return m_count; }
 	};
 
 	static_assert(RefCount<thread_safe_refcount>, "[INTERNAL] thread_safe_refcount does not satisfy RefCount");
@@ -106,20 +105,18 @@ namespace asyncpp {
 		}
 	};
 
-	struct adopt_ref_t {
-		explicit adopt_ref_t() = default;
-	};
-	inline constexpr adopt_ref_t adopt_ref{};
+	inline constexpr struct {
+	} adopt_ref{};
 
 	/**
 	 * \brief Concept checking if a type is viable for usage with ref<>
 	 *        (i.e. it provides overloads for refcounted_add_ref and refcounted_remove_ref)
 	 */
 	template<typename T>
-	concept RefCountable = requires(T* a) {
-							   { refcounted_add_ref(a) };
-							   { refcounted_remove_ref(a) };
-						   };
+	concept RefCountable = requires(T* obj) {
+		{ refcounted_add_ref(obj) };
+		{ refcounted_remove_ref(obj) };
+	};
 
 	/**
 	 * \brief Reference count handle
@@ -139,11 +136,14 @@ namespace asyncpp {
 		 * \param ptr The pointer to store
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
-		ref(T* ptr, adopt_ref_t) noexcept : m_ptr{ptr} { static_assert(RefCountable<T>, "T needs to be refcountable"); }
+		ref(T* ptr, decltype(adopt_ref)) noexcept : m_ptr{ptr} {
+			static_assert(RefCountable<T>, "T needs to be refcountable");
+		}
 		/**
 		 * \brief Construct a new ref object incrementing the reference count of the passed pointer
 		 * \param ptr The pointer to store
 		 */
+		// NOLINTNEXTLINE(google-explicit-constructor)
 		ref(T* ptr) noexcept(noexcept(refcounted_add_ref(std::declval<T*>()))) : m_ptr{ptr} {
 			static_assert(RefCountable<T>, "T needs to be refcountable");
 			if (m_ptr) refcounted_add_ref(m_ptr);
@@ -163,10 +163,11 @@ namespace asyncpp {
 		/// \brief Assignment operator
 		ref& operator=(const ref& other) noexcept(
 			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
-			reset(other.m_ptr);
+			if (&other != this) reset(other.m_ptr);
 			return *this;
 		}
 		/// \brief Move assignment operator
+		//NOLINTNEXTLINE(hicpp-noexcept-move,performance-noexcept-move-constructor)
 		ref& operator=(ref&& other) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = std::exchange(other.m_ptr, nullptr);
@@ -188,7 +189,7 @@ namespace asyncpp {
 		 * \param ptr The new pointer
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
-		void reset(T* ptr, adopt_ref_t) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		void reset(T* ptr, decltype(adopt_ref)) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = ptr;
 		}
@@ -197,6 +198,7 @@ namespace asyncpp {
 		 */
 		void reset() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) { reset(nullptr, adopt_ref); }
 		/// \brief Destructor
+		//NOLINTNEXTLINE(performance-noexcept-destructor)
 		~ref() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) { reset(); }
 		/// \brief Dereference this handle
 		constexpr T* operator->() const noexcept { return m_ptr; }
@@ -300,8 +302,9 @@ namespace asyncpp {
 		 * \param ptr The pointer to store
 		 * \throw std::logic_error if the pointer value collides with the lock_mask
 		 */
+		// NOLINTNEXTLINE(google-explicit-constructor)
 		atomic_ref(ref<T> ptr) {
-			if (reinterpret_cast<uintptr_t>(ptr.get()) & lock_mask) throw std::logic_error("invalid pointer");
+			if ((reinterpret_cast<uintptr_t>(ptr.get()) & lock_mask) != 0) throw std::logic_error("invalid pointer");
 			m_ptr = reinterpret_cast<uintptr_t>(ptr.release());
 		}
 		/** \brief Assignment operator */
@@ -317,15 +320,17 @@ namespace asyncpp {
 		/** \brief Assignment operator */
 		atomic_ref& operator=(const atomic_ref<T>& other) noexcept(
 			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
-			exchange(other.load());
+			if (&other != this) exchange(other.load());
 			return *this;
 		}
 		/** \brief Move assignment operator */
+		//NOLINTNEXTLINE(hicpp-noexcept-move,performance-noexcept-move-constructor)
 		atomic_ref& operator=(atomic_ref<T>&& other) noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			exchange(ref<T>(other.release(), adopt_ref));
 			return *this;
 		}
 		/** \brief Destructor */
+		//NOLINTNEXTLINE(performance-noexcept-destructor)
 		~atomic_ref() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) { exchange(ref<T>()); }
 		/** \brief Get the contained value */
 		ref<T> load() const noexcept(noexcept(refcounted_add_ref(std::declval<T*>()))) {
@@ -361,7 +366,7 @@ namespace asyncpp {
 		 */
 		ref<T> exchange(ref<T> hdl) {
 			auto ptr = hdl.release();
-			if (reinterpret_cast<uintptr_t>(ptr) & lock_mask) throw std::logic_error("invalid pointer");
+			if ((reinterpret_cast<uintptr_t>(ptr) & lock_mask) != 0) throw std::logic_error("invalid pointer");
 
 			// Lock the current pointer value
 			auto val = lock();
@@ -380,6 +385,7 @@ namespace asyncpp {
 		/** \brief Reset the pointer to nullptr */
 		void reset() noexcept(noexcept(refcounted_remove_ref(std::declval<T*>()))) { exchange(ref<T>()); }
 		/** \brief Check if the handle contains a pointer */
+		//NOLINTNEXTLINE(google-explicit-constructor)
 		operator bool() const noexcept { return (m_ptr.load(std::memory_order_relaxed) & ~lock_mask) != 0; }
 		/** \brief Check if the handle contains no pointer */
 		bool operator!() const noexcept { return (m_ptr.load(std::memory_order_relaxed) & ~lock_mask) == 0; }
@@ -467,46 +473,48 @@ namespace asyncpp {
 	}
 
 	template<typename T, typename U>
-	ref<T> static_ref_cast(const ref<U>& r) noexcept {
-		return ref<T>(static_cast<T*>(r.get()));
+	ref<T> static_ref_cast(const ref<U>& rhs) noexcept {
+		return ref<T>(static_cast<T*>(rhs.get()));
 	}
 	template<typename T, typename U>
-	ref<T> static_ref_cast(ref<U>&& r) noexcept {
-		return ref<T>(static_cast<T*>(r.release()), adopt_ref);
+	ref<T> static_ref_cast(ref<U>&& rhs) noexcept {
+		return ref<T>(static_cast<T*>(rhs.release()), adopt_ref);
 	}
 	template<typename T, typename U>
-	ref<T> const_ref_cast(const ref<U>& r) noexcept {
-		return ref<T>(const_cast<T*>(r.get()));
+	ref<T> const_ref_cast(const ref<U>& rhs) noexcept {
+		return ref<T>(const_cast<T*>(rhs.get()));
 	}
 	template<typename T, typename U>
-	ref<T> const_ref_cast(ref<U>&& r) noexcept {
-		return ref<T>(const_cast<T*>(r.release()), adopt_ref);
+	ref<T> const_ref_cast(ref<U>&& rhs) noexcept {
+		return ref<T>(const_cast<T*>(rhs.release()), adopt_ref);
 	}
 	template<typename T, typename U>
-	ref<T> dynamic_ref_cast(const ref<U>& r) noexcept {
-		return ref<T>(dynamic_cast<T*>(r.get()));
+	ref<T> dynamic_ref_cast(const ref<U>& rhs) noexcept {
+		return ref<T>(dynamic_cast<T*>(rhs.get()));
 	}
 	template<typename T, typename U>
-	ref<T> dynamic_ref_cast(ref<U>&& r) noexcept {
-		auto ptr = dynamic_cast<T*>(r.get());
+	ref<T> dynamic_ref_cast(ref<U>&& rhs) noexcept {
+		auto ptr = dynamic_cast<T*>(rhs.get());
 		if (!ptr) return ref<T>();
 		// We already hold the correct pointer using get(),
 		// so only clear it without removing the ref
-		r.release();
+		rhs.release();
 		return ref<T>(ptr, adopt_ref);
 	}
 
 } // namespace asyncpp
 
 template<typename T>
+//NOLINTNEXTLINE(cert-dcl58-cpp)
 struct std::hash<asyncpp::ref<T>> {
-	constexpr size_t operator()(const asyncpp::ref<T>& r) const noexcept { return std::hash<void*>{}(r.get()); }
+	constexpr size_t operator()(const asyncpp::ref<T>& rhs) const noexcept { return std::hash<void*>{}(rhs.get()); }
 };
 
 template<typename T>
+//NOLINTNEXTLINE(cert-dcl58-cpp)
 struct std::hash<asyncpp::atomic_ref<T>> {
-	constexpr size_t operator()(const asyncpp::atomic_ref<T>& r) const noexcept {
-		auto ptr = r.m_ptr.load(std::memory_order::relaxed) & ~asyncpp::atomic_ref<T>::lock_mask;
+	constexpr size_t operator()(const asyncpp::atomic_ref<T>& rhs) const noexcept {
+		auto ptr = rhs.m_ptr.load(std::memory_order::relaxed) & ~asyncpp::atomic_ref<T>::lock_mask;
 		return std::hash<uintptr_t>{}(ptr);
 	}
 };

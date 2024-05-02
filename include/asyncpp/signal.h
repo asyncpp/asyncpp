@@ -1,5 +1,6 @@
 #pragma once
 #include <asyncpp/ref.h>
+
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -40,10 +41,12 @@ namespace asyncpp {
 		friend class signal;
 
 	public:
-		signal_handle(ref<detail::signal_node_base> hdl = {}) : m_node(hdl) {}
+		explicit signal_handle(ref<detail::signal_node_base> hndl = {}) : m_node(std::move(hndl)) {}
 		explicit operator bool() const noexcept { return valid(); }
-		bool operator!() const noexcept { return !valid(); }
-		bool valid() const noexcept { return m_node && m_node->counter != detail::signal_removed_counter; }
+		[[nodiscard]] bool operator!() const noexcept { return !valid(); }
+		[[nodiscard]] bool valid() const noexcept {
+			return m_node && m_node->counter != detail::signal_removed_counter;
+		}
 		void disconnect() noexcept {
 			if (m_node) m_node->counter = detail::signal_removed_counter;
 			m_node.reset();
@@ -64,16 +67,20 @@ namespace asyncpp {
 		signal_handle m_handle;
 
 	public:
-		scoped_signal_handle(ref<detail::signal_node_base> hdl = {}) : m_handle(hdl) {}
+		//NOLINTNEXTLINE(google-explicit-constructor)
+		scoped_signal_handle(ref<detail::signal_node_base> hdl = {}) : m_handle(std::move(hdl)) {}
+		//NOLINTNEXTLINE(google-explicit-constructor)
 		scoped_signal_handle(signal_handle hdl) : m_handle(std::move(hdl)) {}
 		~scoped_signal_handle() noexcept { m_handle.disconnect(); }
 		explicit operator bool() const noexcept { return valid(); }
-		bool operator!() const noexcept { return !valid(); }
-		bool valid() const noexcept { return m_handle.valid(); }
+		[[nodiscard]] bool operator!() const noexcept { return !valid(); }
+		[[nodiscard]] bool valid() const noexcept { return m_handle.valid(); }
 		void disconnect() noexcept { m_handle.disconnect(); }
-		void release() noexcept { m_handle = {}; }
-		constexpr operator signal_handle&() noexcept { return m_handle; }
-		constexpr operator const signal_handle&() const noexcept { return m_handle; }
+		void release() noexcept { m_handle = signal_handle{}; }
+		// NOLINTNEXTLINE(google-explicit-constructor)
+		[[nodiscard]] constexpr operator signal_handle&() noexcept { return m_handle; }
+		// NOLINTNEXTLINE(google-explicit-constructor)
+		[[nodiscard]] constexpr operator const signal_handle&() const noexcept { return m_handle; }
 
 		friend inline constexpr auto operator<=>(const scoped_signal_handle& lhs,
 												 const scoped_signal_handle& rhs) noexcept {
@@ -92,7 +99,6 @@ namespace asyncpp {
 	template<typename... TParams, typename TTraits>
 	class signal<void(TParams...), TTraits> {
 		struct node : detail::signal_node_base {
-			virtual ~node() noexcept = default;
 			virtual void invoke(const TParams&...) = 0;
 
 			ref<node> next{};
@@ -100,39 +106,41 @@ namespace asyncpp {
 		};
 		template<typename FN>
 		struct node_impl final : node {
-			virtual ~node_impl() noexcept = default;
-			virtual void invoke(const TParams&... params) override { m_fn(params...); }
+			~node_impl() noexcept = default;
+			void invoke(const TParams&... params) override { m_fn(params...); }
 			[[no_unique_address]] FN m_fn;
-			node_impl(FN&& fn) : m_fn(std::move(fn)) {}
+			explicit node_impl(FN&& fncb) : m_fn(std::move(fncb)) {}
 		};
 
 	public:
 		using traits_type = TTraits;
 		using handle = signal_handle;
 
-		signal() {}
+		signal() = default;
 		~signal();
 		signal(const signal&) = delete;
+		//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 		signal(signal&&);
 		signal& operator=(const signal&) = delete;
+		//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 		signal& operator=(signal&&);
 
-		size_t size() const noexcept;
-		bool empty() const noexcept { return size() == 0; }
+		[[nodiscard]] size_t size() const noexcept;
+		[[nodiscard]] bool empty() const noexcept { return size() == 0; }
 
 		template<typename FN>
-		handle append(FN&& fn);
+		handle append(FN&& fncb);
 		template<typename FN>
-		handle prepend(FN&& fn);
+		handle prepend(FN&& fncb);
 
 		bool remove(const handle& hdl);
-		bool owns_handle(const handle& hdl) const;
+		[[nodiscard]] bool owns_handle(const handle& hdl) const;
 
 		size_t operator()(const TParams&... params) const;
 
 		template<typename FN>
-		handle operator+=(FN&& fn) {
-			return append(std::move(fn));
+		handle operator+=(FN&& fncb) {
+			return append(std::forward<decltype(fncb)>(fncb));
 		}
 
 		void operator-=(const handle& hdl) { remove(hdl); }
@@ -185,41 +193,43 @@ namespace asyncpp {
 		using handle = typename signal_type::handle;
 
 		signal_manager() = default;
+		//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 		signal_manager(signal_manager&&);
+		//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 		signal_manager& operator=(signal_manager&&);
 		signal_manager(const signal_manager&) = delete;
 		signal_manager& operator=(const signal_manager&) = delete;
 
 		template<typename FN>
-		handle append(event_type event, FN&& cb) {
-			auto it = find_or_create_slot(event);
-			assert(it != m_mapping.end());
-			return it->second.append(std::move(cb));
+		handle append(event_type event, FN&& fncb) {
+			auto iter = find_or_create_slot(event);
+			assert(iter != m_mapping.end());
+			return iter->second.append(std::forward<decltype(fncb)>(fncb));
 		}
 		template<typename FN>
-		handle prepend(event_type event, FN&& cb) {
-			auto it = find_or_create_slot(event);
-			assert(it != m_mapping.end());
-			return it->second.prepend(std::move(cb));
+		handle prepend(event_type event, FN&& fncb) {
+			auto iter = find_or_create_slot(event);
+			assert(iter != m_mapping.end());
+			return iter->second.prepend(std::forward<decltype(fncb)>(fncb));
 		}
 
 		bool remove(event_type event, const handle& hdl) {
 			std::shared_lock lck{m_mutex};
-			auto it = m_mapping.find(event);
-			return it != m_mapping.end() && it->second.remove(hdl);
+			auto iter = m_mapping.find(event);
+			return iter != m_mapping.end() && iter->second.remove(hdl);
 		}
 
 		bool owns_handle(event_type event, const handle& hdl) const {
 			std::shared_lock lck{m_mutex};
-			auto it = m_mapping.find(event);
-			return it != m_mapping.end() && it->second.owns_handle(hdl);
+			auto iter = m_mapping.find(event);
+			return iter != m_mapping.end() && iter->second.owns_handle(hdl);
 		}
 
 		size_t invoke(event_type event, const TParams&... params) const {
 			std::shared_lock lck{m_mutex};
-			auto it = m_mapping.find(event);
-			if (it == m_mapping.end()) return 0;
-			return it->second(params...);
+			auto iter = m_mapping.find(event);
+			if (iter == m_mapping.end()) return 0;
+			return iter->second(params...);
 		}
 
 		size_t operator()(event_type event, const TParams&... params) const { return invoke(event, params...); }
@@ -243,19 +253,20 @@ namespace asyncpp {
 
 		auto find_or_create_slot(event_type evt) {
 			std::shared_lock lck{m_mutex};
-			auto it = m_mapping.find(evt);
-			if (it == m_mapping.end()) {
+			auto iter = m_mapping.find(evt);
+			if (iter == m_mapping.end()) {
 				lck.unlock();
 				std::unique_lock unique{m_mutex};
-				it = m_mapping.find(evt);
-				if (it != m_mapping.end()) return it;
-				it = m_mapping.emplace(evt, signal_type{}).first;
+				iter = m_mapping.find(evt);
+				if (iter != m_mapping.end()) return iter;
+				iter = m_mapping.emplace(evt, signal_type{}).first;
 			}
-			return it;
+			return iter;
 		}
 	};
 
 	template<typename... TParams, typename TTraits>
+	//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 	inline signal<void(TParams...), TTraits>::signal(signal&& other) {
 		std::scoped_lock lck{m_mutex, other.m_mutex};
 		m_head = std::exchange(other.m_head, nullptr);
@@ -264,6 +275,7 @@ namespace asyncpp {
 	}
 
 	template<typename... TParams, typename TTraits>
+	//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 	inline signal<void(TParams...), TTraits>& signal<void(TParams...), TTraits>::operator=(signal&& other) {
 		std::scoped_lock lck{m_mutex, other.m_mutex};
 		auto node = m_head;
@@ -307,8 +319,8 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	template<typename FN>
-	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::append(FN&& fn) {
-		ref<node> new_node(new node_impl<FN>(std::move(fn)));
+	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::append(FN&& fncb) {
+		ref<node> new_node(new node_impl<FN>(std::forward<decltype(fncb)>(fncb)));
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->previous = m_tail;
@@ -323,8 +335,8 @@ namespace asyncpp {
 
 	template<typename... TParams, typename TTraits>
 	template<typename FN>
-	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::prepend(FN&& fn) {
-		ref<node> new_node(new node_impl<FN>(std::move(fn)));
+	inline typename signal<void(TParams...), TTraits>::handle signal<void(TParams...), TTraits>::prepend(FN&& fncb) {
+		ref<node> new_node(new node_impl<FN>(std::forward<decltype(fncb)>(fncb)));
 		new_node->counter = get_next_counter();
 		if (std::lock_guard lck{m_mutex}; m_head) {
 			new_node->next = m_head;
@@ -351,11 +363,11 @@ namespace asyncpp {
 		auto node = static_ref_cast<signal::node>(hdl.m_node);
 		if (!node || node->counter == detail::signal_removed_counter) return false;
 		std::lock_guard lck{m_mutex};
-		auto h = m_head;
-		while (h && h != node) {
-			h = h->next;
+		auto handle = m_head;
+		while (handle && handle != node) {
+			handle = handle->next;
 		}
-		return node == h;
+		return node == handle;
 	}
 
 	template<typename... TParams, typename TTraits>

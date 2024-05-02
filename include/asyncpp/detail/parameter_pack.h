@@ -13,9 +13,9 @@ namespace asyncpp::detail {
 			}
 		}
 
+	public:
 		parameter_pack() = delete;
 
-	public:
 		template<size_t Index, typename... Args>
 		static constexpr decltype(auto) get_at_index(Args&&... args) noexcept {
 			static_assert(Index < sizeof...(Args), "index out of range");

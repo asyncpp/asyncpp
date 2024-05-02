@@ -1,4 +1,8 @@
 #pragma once
+/**
+ * \file sync_wait.h
+ * \brief Utility functions for quickly converting a awaitable to a std::future
+ */
 #include <asyncpp/fire_and_forget.h>
 #include <future>
 
@@ -10,16 +14,16 @@ namespace asyncpp {
 	 * This can be used to synchronously wait for the result of a coroutine.
 	 */
 	template<typename T, typename Awaitable>
-	std::future<T> as_promise(Awaitable&& t)
+	std::future<T> as_promise(Awaitable&& awaiter)
 		requires(!std::is_void_v<T>)
 	{
-		std::promise<T> p;
-		auto res = p.get_future();
-		[](std::decay_t<Awaitable> t, std::promise<T> p) -> eager_fire_and_forget_task<> {
+		std::promise<T> promise;
+		auto res = promise.get_future();
+		[](std::decay_t<Awaitable> awaiter, std::promise<T> promise) -> eager_fire_and_forget_task<> {
 			try {
-				p.set_value(co_await std::move(t));
-			} catch (...) { p.set_exception(std::current_exception()); }
-		}(std::move(t), std::move(p));
+				promise.set_value(co_await std::move(awaiter));
+			} catch (...) { promise.set_exception(std::current_exception()); }
+		}(std::forward<decltype(awaiter)>(awaiter), std::move(promise));
 		return res;
 	}
 
@@ -30,17 +34,17 @@ namespace asyncpp {
 	 * This can be used to synchronously wait for the result of a coroutine.
 	 */
 	template<typename T, typename Awaitable>
-	std::future<void> as_promise(Awaitable&& t)
+	std::future<void> as_promise(Awaitable&& awaiter)
 		requires(std::is_void_v<T>)
 	{
-		std::promise<void> p;
-		auto res = p.get_future();
-		[](std::decay_t<Awaitable> t, std::promise<void> p) -> eager_fire_and_forget_task<> {
+		std::promise<void> promise;
+		auto res = promise.get_future();
+		[](std::decay_t<Awaitable> awaiter, std::promise<void> promise) -> eager_fire_and_forget_task<> {
 			try {
-				co_await std::move(t);
-				p.set_value();
-			} catch (...) { p.set_exception(std::current_exception()); }
-		}(std::move(t), std::move(p));
+				co_await std::move(awaiter);
+				promise.set_value();
+			} catch (...) { promise.set_exception(std::current_exception()); }
+		}(std::forward<decltype(awaiter)>(awaiter), std::move(promise));
 		return res;
 	}
 
@@ -53,7 +57,7 @@ namespace asyncpp {
 	 * 
 	 * This can be used to synchronously wait for the result of a coroutine.
 	 */
-	auto as_promise(auto&& t) {
-		return as_promise<typename detail::await_return_type<std::remove_cvref_t<decltype(t)>>::type>(std::move(t));
+	auto as_promise(auto&& awaiter) {
+		return as_promise<typename detail::await_return_type<std::remove_cvref_t<decltype(awaiter)>>::type>(std::forward<decltype(awaiter)>(awaiter));
 	}
 } // namespace asyncpp

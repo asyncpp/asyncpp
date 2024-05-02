@@ -2,7 +2,7 @@
 #include <asyncpp/detail/promise_allocator_base.h>
 #include <asyncpp/detail/std_import.h>
 #include <cassert>
-#include <stdexcept>
+#include <exception>
 #include <variant>
 
 namespace asyncpp {
@@ -13,8 +13,8 @@ namespace asyncpp {
 		template<class TVal, ByteAllocator Allocator, class TPromise>
 		class task_promise_base : public promise_allocator_base<Allocator> {
 		public:
-			task_promise_base() noexcept {}
-			~task_promise_base() {}
+			task_promise_base() noexcept = default;
+			~task_promise_base() = default;
 			task_promise_base(const task_promise_base&) = delete;
 			task_promise_base(task_promise_base&&) = delete;
 			task_promise_base& operator=(const task_promise_base&) = delete;
@@ -28,10 +28,10 @@ namespace asyncpp {
 			auto final_suspend() noexcept {
 				struct awaiter {
 					constexpr bool await_ready() noexcept { return false; }
-					auto await_suspend(coroutine_handle<TPromise> h) noexcept {
-						assert(h);
-						assert(h.promise().m_continuation);
-						return h.promise().m_continuation;
+					auto await_suspend(coroutine_handle<TPromise> hndl) noexcept {
+						assert(hndl);
+						assert(hndl.promise().m_continuation);
+						return hndl.promise().m_continuation;
 					}
 					constexpr void await_resume() noexcept {}
 				};
@@ -48,8 +48,8 @@ namespace asyncpp {
 				return std::get<TVal>(std::move(this->m_value));
 			}
 
-			coroutine_handle<> m_continuation;
-			std::variant<std::monostate, TVal, std::exception_ptr> m_value;
+			coroutine_handle<> m_continuation{};
+			std::variant<std::monostate, TVal, std::exception_ptr> m_value{};
 		};
 
 		template<class T, ByteAllocator Allocator>
@@ -93,13 +93,14 @@ namespace asyncpp {
 		using handle_t = coroutine_handle<promise_type>;
 
 		/// \brief Construct from handle
-		task(handle_t h) noexcept : m_coro(h) {
+		//NOLINTNEXTLINE(google-explicit-constructor)
+		task(handle_t hndl) noexcept : m_coro(hndl) {
 			assert(this->m_coro);
 			assert(!this->m_coro.done());
 		}
 
 		/// \brief Construct from nullptr. The resulting task is invalid.
-		task(std::nullptr_t) noexcept : m_coro{} {}
+		explicit task(std::nullptr_t) noexcept : m_coro{} {}
 
 		/// \brief Move constructor
 		task(task&& other) noexcept : m_coro{std::exchange(other.m_coro, {})} {}
@@ -127,10 +128,10 @@ namespace asyncpp {
 			struct awaiter {
 				constexpr explicit awaiter(handle_t coro) : m_coro(coro) {}
 				constexpr bool await_ready() noexcept { return false; }
-				auto await_suspend(coroutine_handle<void> h) noexcept {
+				auto await_suspend(coroutine_handle<void> hndl) noexcept {
 					assert(this->m_coro);
-					assert(h);
-					m_coro.promise().m_continuation = h;
+					assert(hndl);
+					m_coro.promise().m_continuation = hndl;
 					return m_coro;
 				}
 				T await_resume() {

@@ -49,24 +49,22 @@ namespace asyncpp::detail {
 		size = page_count * pagesize;
 		const auto alloc_size = size + pagesize * 2;
 #if defined(MAP_STACK)
-		void* const stack = ::mmap(0, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+		void* const stack =
+			::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
 #elif defined(MAP_ANON)
-		void* const stack = ::mmap(0, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+		void* const stack = ::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 #else
-		void* const stack = ::mmap(0, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		void* const stack = ::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #endif
 		if (stack == MAP_FAILED) return false;
 
 		// Protect a page at the bottom and top to cause fault on stack over/underflow
 		[[maybe_unused]] auto res = ::mprotect(stack, pagesize, PROT_NONE);
 		assert(res == 0);
-		res = ::mprotect(reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(stack) + size + pagesize), pagesize,
-						 PROT_NONE);
+		res = ::mprotect(static_cast<std::byte*>(stack) + size + pagesize, pagesize, PROT_NONE);
 		assert(res == 0);
 
-		// TODO: Register stack with sanitizers
-
-		ctx.stack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(stack) + size + pagesize);
+		ctx.stack = static_cast<std::byte*>(stack) + size + pagesize;
 		ctx.stack_size = size;
 		ctx.mmap_base = stack;
 		ctx.mmap_size = alloc_size;
@@ -75,8 +73,6 @@ namespace asyncpp::detail {
 
 	inline bool fiber_deallocate_stack(stack_context& ctx) {
 		if (ctx.mmap_base == nullptr) return true;
-
-		// TODO: Unregister stack from sanitizers
 
 		auto res = ::munmap(ctx.mmap_base, ctx.mmap_size);
 		return res == 0;
@@ -124,11 +120,13 @@ namespace asyncpp::detail {
 		size_t stack_size;
 	};
 
-	inline bool fiber_makecontext(fiber_context* ctx, const stack_context& stack, void (*fn)(void* arg), void* arg) {
+	inline bool fiber_makecontext(fiber_context* ctx, const stack_context& stack, void (*entry_fn)(void* arg),
+								  void* arg) {
 		ctx->stack = stack.stack;
 		ctx->stack_size = stack.stack_size;
 
 		// Make sure top of the stack is aligned to 16byte. This should always be the case but better safe than sorry.
+		// NOLINTNEXTLINE(performance-no-int-to-ptr,readability-identifier-length)
 		auto sp = reinterpret_cast<uintptr_t*>(reinterpret_cast<uintptr_t>(stack.stack) & static_cast<uintptr_t>(~15L));
 #if defined(__i386__)
 		// The restore code adds 28 byte and ret another 4. Since we want
@@ -154,8 +152,8 @@ namespace asyncpp::detail {
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 10);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
 		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
-		stack_frame* frame = reinterpret_cast<stack_frame*>(sp);
-		frame->ret_addr = reinterpret_cast<uintptr_t>(fn);
+		auto frame = reinterpret_cast<stack_frame*>(sp);
+		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
 		assert((reinterpret_cast<uintptr_t>(sp) % 16) == 0xc);
 #elif defined(__x86_64__)
@@ -182,8 +180,8 @@ namespace asyncpp::detail {
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 10);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
 		memset(sp, 0, reinterpret_cast<uintptr_t>(stack.stack) - reinterpret_cast<uintptr_t>(sp));
-		stack_frame* frame = reinterpret_cast<stack_frame*>(sp);
-		frame->ret_addr = reinterpret_cast<uintptr_t>(fn);
+		auto frame = reinterpret_cast<stack_frame*>(sp);
+		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
 #elif defined(__arm__)
 		// Stack needs to be 64bit aligned for vstmia
@@ -218,8 +216,8 @@ namespace asyncpp::detail {
 #endif
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
 		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
-		stack_frame* frame = reinterpret_cast<stack_frame*>(sp);
-		frame->ret_addr = reinterpret_cast<uintptr_t>(fn);
+		auto frame = reinterpret_cast<stack_frame*>(sp);
+		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
 #elif defined(__arm64__) || defined(__aarch64__)
 		// ARM64 requires the stack pointer to always be 16 byte aligned
@@ -240,8 +238,8 @@ namespace asyncpp::detail {
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 22);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
 		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
-		stack_frame* frame = reinterpret_cast<stack_frame*>(sp);
-		frame->ret_addr = reinterpret_cast<uintptr_t>(fn);
+		auto frame = reinterpret_cast<stack_frame*>(sp);
+		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
 #elif defined(__s390x__)
 		// The s390x ABI requires a 160-byte caller allocated register save area.
@@ -261,8 +259,8 @@ namespace asyncpp::detail {
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 18);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
 		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
-		stack_frame* frame = reinterpret_cast<stack_frame*>(sp);
-		frame->ret_addr = reinterpret_cast<uintptr_t>(fn);
+		auto frame = reinterpret_cast<stack_frame*>(sp);
+		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
 #elif defined(__powerpc64__)
 		sp -= 4;
@@ -282,12 +280,12 @@ namespace asyncpp::detail {
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 42);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
 		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
-		stack_frame* frame = reinterpret_cast<stack_frame*>(sp);
+		auto frame = reinterpret_cast<stack_frame*>(sp);
 		// Note: On PPC a function has two entry points for local and global entry respectively
 		// 		 Since we get the global entry point we also need to set the r12 register to the
 		//		 same pointer.
-		frame->r12 = reinterpret_cast<uintptr_t>(fn);
-		frame->ret_addr = reinterpret_cast<uintptr_t>(fn);
+		frame->r12 = reinterpret_cast<uintptr_t>(entry_fn);
+		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
 #else
 #error "Unsupported architecture."
@@ -299,13 +297,14 @@ namespace asyncpp::detail {
 	__attribute__((naked, noinline)) inline void fiber_swap_stack(void** current_pointer_out, void* dest_pointer) {
 #if defined(__i386__)
 		/* `current_pointer_out` is in `4(%ebp)`. `dest_pointer` is in `8(%ebp)`. */
+		//NOLINTNEXTLINE(hicpp-no-assembler)
 		asm("leal -0x1c(%esp), %esp\n"
 			// Save FPU state
-			"stmxcsr  (%esp)\n"		   // save MMX control- and status-word
-			"fnstcw   0x4(%esp)\n"	   // save x87 control-word
+			"stmxcsr  (%esp)\n"	   // save MMX control- and status-word
+			"fnstcw   0x4(%esp)\n" // save x87 control-word
 #ifdef SAVE_TLS_STACK_PROTECTOR
-			"movl  %gs:0x14, %ecx\n"   // read stack guard from TLS record
-			"movl  %ecx, 0x8(%esp)\n"  // save stack guard
+			"movl  %gs:0x14, %ecx\n"  // read stack guard from TLS record
+			"movl  %ecx, 0x8(%esp)\n" // save stack guard
 #endif
 			"movl  %edi, 0xc(%esp)\n"  // save EDI
 			"movl  %esi, 0x10(%esp)\n" // save ESI
@@ -318,8 +317,8 @@ namespace asyncpp::detail {
 			"mov 0x24(%esp), %esi\n" // Read second arg ...
 			"mov %esi, %esp\n"		 // ... and restore it to the stack pointer
 
-			"ldmxcsr  (%esp)\n"		  // restore MMX control- and status-word
-			"fldcw    0x4(%esp)\n"	  // restore x87 control-word
+			"ldmxcsr  (%esp)\n"	   // restore MMX control- and status-word
+			"fldcw    0x4(%esp)\n" // restore x87 control-word
 #ifdef SAVE_TLS_STACK_PROTECTOR
 			"movl  0x8(%esp), %edx\n" // load stack guard
 			"movl  %edx, %gs:0x14\n"  // restore stack guard to TLS record
@@ -338,13 +337,14 @@ namespace asyncpp::detail {
 #error "Non-native pointer size."
 #endif
 		/* `current_pointer_out` is in `%rdi`. `dest_pointer` is in `%rsi`. */
+		//NOLINTNEXTLINE(hicpp-no-assembler)
 		asm("leaq -0x48(%rsp), %rsp\n"
 			// Save FPU state
-			"stmxcsr  (%rsp)\n"		   /* save MMX control- and status-word */
-			"fnstcw   0x4(%rsp)\n"	   /* save x87 control-word */
+			"stmxcsr  (%rsp)\n"	   /* save MMX control- and status-word */
+			"fnstcw   0x4(%rsp)\n" /* save x87 control-word */
 #ifdef SAVE_TLS_STACK_PROTECTOR
-			"movq  %fs:0x28, %rcx\n"   /* read stack guard from TLS record */
-			"movq  %rcx, 0x8(%rsp)\n"  /* save stack guard */
+			"movq  %fs:0x28, %rcx\n"  /* read stack guard from TLS record */
+			"movq  %rcx, 0x8(%rsp)\n" /* save stack guard */
 #endif
 			"movq  %r12, 0x10(%rsp)\n" // save R12
 			"movq  %r13, 0x18(%rsp)\n" // save R13
@@ -357,8 +357,8 @@ namespace asyncpp::detail {
 			// On amd64, the second argument comes from rsi.
 			"movq %rsi, %rsp\n"
 			// Restore FPU state
-			"ldmxcsr (%rsp)\n"		 // Restore MMX control- and status-word
-			"fldcw   0x4(%rsp)\n"	 // Restore x87 control-word
+			"ldmxcsr (%rsp)\n"	  // Restore MMX control- and status-word
+			"fldcw   0x4(%rsp)\n" // Restore x87 control-word
 #ifdef SAVE_TLS_STACK_PROTECTOR
 			"movq 0x8(%rsp), %rcx\n" // Restore stack guard to TLS record
 			"movq %rcx, %fs:28\n"
@@ -377,6 +377,7 @@ namespace asyncpp::detail {
 			"ret\n");
 #elif defined(__arm__)
 		/* `current_pointer_out` is in `r0`. `dest_pointer` is in `r1` */
+		//NOLINTNEXTLINE(hicpp-no-assembler)
 		asm(
 			// Stack is 64bit aligned by the caller, preserve that.
 			// Preserve r4-r12 and the return address (r14).
@@ -404,6 +405,7 @@ namespace asyncpp::detail {
 			// Return to the restored function
 			"bx r14\n");
 #elif defined(__arm64__) || defined(__aarch64__)
+		//NOLINTNEXTLINE(hicpp-no-assembler)
 		asm(
 			// Preserve d8-d15 + x19-x29 and the return address (x30).
 			// Note: x30 is stored twice due to alignment requirements
@@ -440,6 +442,7 @@ namespace asyncpp::detail {
 			"ret x30\n");
 #elif defined(__s390x__)
 		/* `current_pointer_out` is in `%r2`. `dest_pointer` is in `%r3`. */
+		//NOLINTNEXTLINE(hicpp-no-assembler)
 		asm(
 			// Preserve r6-r13, the return address (r14), and f8-f15.
 			"aghi %r15, -(8*18)\n"
@@ -474,6 +477,7 @@ namespace asyncpp::detail {
 			"br %r14\n");
 #elif defined(__powerpc64__)
 		// `current_pointer_out` is in `r3`. `dest_pointer` is in `r4`
+		//NOLINTNEXTLINE(hicpp-no-assembler)
 		asm("addis   %r2, %r12, .TOC.-fiber_swap_stack@ha\n"
 			"addi    %r2, %r2, .TOC.-fiber_swap_stack@l\n"
 			".localentry fiber_swap_stack, . - fiber_swap_stack\n"
@@ -582,8 +586,8 @@ namespace asyncpp::detail {
 #endif
 	}
 
-	inline bool fiber_swapcontext(fiber_context* out, fiber_context* in) {
-		fiber_swap_stack(&out->current_sp, in->current_sp);
+	inline bool fiber_swapcontext(fiber_context* out_ctx, fiber_context* in_ctx) {
+		fiber_swap_stack(&out_ctx->current_sp, in_ctx->current_sp);
 		return true;
 	}
 
@@ -625,14 +629,15 @@ namespace asyncpp::detail {
 		void* start_arg;
 	};
 
-	inline bool fiber_makecontext(fiber_context* ctx, const stack_context& stack, void (*fn)(void* arg), void* arg) {
+	inline bool fiber_makecontext(fiber_context* ctx, const stack_context& stack, void (*entry_fn)(void* arg),
+								  void* arg) {
 		static void (*wrapper)(LPVOID) = [](LPVOID param) {
 			auto ctx = static_cast<fiber_context*>(param);
 			ctx->start_fn(ctx->start_arg);
 		};
 		ctx->fiber_handle = CreateFiber(stack.stack_size, wrapper, ctx);
 		if (ctx->fiber_handle == NULL) return false;
-		ctx->start_fn = fn;
+		ctx->start_fn = entry_fn;
 		ctx->start_arg = arg;
 		return true;
 	}
@@ -667,7 +672,7 @@ namespace asyncpp::detail {
 namespace asyncpp {
 	template<typename TReturn>
 	class fiber;
-}
+} // namespace asyncpp
 namespace asyncpp::detail {
 	struct fiber_handle_base {
 		// C++20 coroutine ABI dictates those
@@ -705,14 +710,14 @@ namespace asyncpp::detail {
 	struct fiber_destroy_requested_exception {};
 
 	template<typename FN>
-	static coroutine_handle<> make_fiber_handle(size_t stack_size, FN&& fn) {
+	static coroutine_handle<> make_fiber_handle(size_t stack_size, FN&& cbfn) {
 		struct handle : fiber_handle_base {
 			FN function;
-			handle(FN&& fn) : function(std::forward<FN>(fn)) {}
+			explicit handle(FN&& cbfn) : function(std::forward<FN>(cbfn)) {}
 		};
 		static_assert(offsetof(handle, resume_cb) == 0);
 
-		auto hndl = new handle(std::forward<FN>(fn));
+		auto hndl = new handle(std::forward<FN>(cbfn));
 		hndl->resume_cb = [](fiber_handle_base* hndl) {
 			auto old = std::exchange(g_current_fiber, hndl);
 			while (hndl->resume_cb != nullptr) {
@@ -781,7 +786,7 @@ namespace asyncpp::detail {
 					hndl->was_started = true;
 					try {
 						hndl->function();
-					} catch (const fiber_destroy_requested_exception&) {}
+					} catch (const fiber_destroy_requested_exception&) {} // NOLINT(bugprone-empty-catch)
 					hndl->resume_cb = nullptr;
 #if ASYNCPP_HAS_ASAN
 					__sanitizer_start_switch_fiber(nullptr, hndl->asan_parent_stack, hndl->asan_parent_stack_size);
@@ -858,13 +863,17 @@ namespace asyncpp::detail {
 #endif
 			if (hndl->suspend_exception != nullptr)
 				std::rethrow_exception(std::exchange(hndl->suspend_exception, nullptr));
-			if (hndl->want_destroy) { throw fiber_destroy_requested_exception{}; }
+			if (hndl->want_destroy) {
+				// NOLINTNEXTLINE(hicpp-exception-baseclass)
+				throw fiber_destroy_requested_exception{};
+			}
 		}
 		return awaiter.await_resume();
 	}
 
 	struct fib_await_helper {
 		template<typename T>
+		// NOLINTNEXTLINE(misc-unconventional-assign-operator)
 		auto operator=(T&& awaiter) {
 			return fiber_await(std::forward<T>(awaiter));
 		}
@@ -872,39 +881,72 @@ namespace asyncpp::detail {
 } // namespace asyncpp::detail
 
 namespace asyncpp {
+	/**
+	 * \brief Fiber class providing a stackfull coroutine with a `void` return value.
+	 */
 	template<>
 	class fiber<void> {
 
 		coroutine_handle<> m_handle;
 
 	public:
+		/**
+		 * \brief Construct a new fiber for the specified entry function.
+		 * 
+		 * The specified function gets placed as the first function in the backtrace of the fiber and is invoked
+		 * on its own stack once the fiber is awaited. Once the entry function returns a coroutine awaiting the fiber will resume.
+		 * You can freely specify the stack size and it will get rounded to the next possible value after adding all overhead (guard pages).
+		 * Keep in mind that most platforms treat exceeding the stack space like a segmentation fault and will terminate your program.
+		 * This stack_size is a final amount, unlike the normal thread stack it does not grow automatically.
+		 * \param function The function to execute when the fiber is started.
+		 * \param stack_size The requested stack size in bytes. This value is rounded up to the next page size.
+		 * \tparam FN 
+		 */
 		template<typename FN>
-		fiber(FN&& fn, size_t stack_size = 256 * 1024)
-			: m_handle(detail::make_fiber_handle(stack_size, std::forward<FN>(fn))) {}
+		explicit fiber(FN&& function, size_t stack_size = 262144)
+			requires(!std::is_same_v<FN, fiber>)
+			: m_handle(detail::make_fiber_handle(stack_size, std::forward<FN>(function))) {}
+		/// \brief Construct an empty fiber handle
 		constexpr fiber() noexcept : m_handle(nullptr) {}
+		/// \brief Destructor
 		~fiber() {
 			if (m_handle) m_handle.destroy();
 		}
+		/// \brief Move constructor. The moved from handle will be empty.
 		fiber(fiber&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
+		/// \brief Move constructor. The moved from handle will be empty.
 		fiber& operator=(fiber&& other) noexcept {
-			if (m_handle) m_handle.destroy();
-			m_handle = std::exchange(other.m_handle, nullptr);
+			if(&other != this) {
+				if (m_handle) m_handle.destroy();
+				m_handle = std::exchange(other.m_handle, nullptr);
+			}
 			return *this;
 		}
 		fiber(const fiber&) = delete;
 		fiber& operator=(const fiber&) = delete;
 
+		/**
+		 * \brief Await a standard C++20 coroutine awaitable.
+		 * 
+		 * Pauses the fiber till the awaited coroutine is done and returns the value generated by it.
+		 * \param awaiter The awaitable to await
+		 * \return The value generated by the awaitable
+		 */
 		template<typename T>
 		static auto fiber_await(T&& awaiter) {
-			return detail::fiber_await(std::forward<T>(awaiter));
+			return detail::fiber_await(std::forward<decltype(awaiter)>(awaiter));
 		}
 
+		/**
+		 * \brief Get an awaitable for this fiber.
+		 * \return auto An awaiter that is resumed once the fiber finishes
+		 */
 		auto await() {
 			if (!m_handle) throw std::logic_error("empty fiber");
 			struct awaiter {
 				coroutine_handle<> m_handle;
-				bool await_ready() const noexcept { return m_handle.done(); }
-				coroutine_handle<> await_suspend(coroutine_handle<> hdl) const {
+				[[nodiscard]] bool await_ready() const noexcept { return m_handle.done(); }
+				[[nodiscard]] coroutine_handle<> await_suspend(coroutine_handle<> hdl) const {
 					auto ctx = static_cast<detail::fiber_handle_base*>(m_handle.address());
 					if (ctx->continuation != nullptr) throw std::logic_error("already awaited");
 					ctx->continuation = hdl;
@@ -915,41 +957,77 @@ namespace asyncpp {
 			return awaiter{m_handle};
 		}
 
-		auto operator co_await() noexcept { return await(); }
+		/**
+		 * \brief Get an awaitable for this fiber.
+		 * \return auto An awaiter that is resumed once the fiber finishes
+		 */
+		auto operator co_await() { return await(); }
 	};
 
+	/**
+	 * \brief Fiber class providing a stackfull coroutine.
+	 */
 	template<typename TReturn>
 	class fiber {
-		std::unique_ptr<std::optional<TReturn>> m_result;
-		fiber<void> m_base;
+		std::unique_ptr<std::optional<TReturn>> m_result{};
+		fiber<void> m_base{};
 
 	public:
+		/**
+		 * \brief Construct a new fiber for the specified entry function.
+		 * 
+		 * The specified function gets placed as the first function in the backtrace of the fiber and is invoked
+		 * on its own stack once the fiber is awaited. Once the entry function returns a coroutine awaiting the fiber will resume.
+		 * You can freely specify the stack size and it will get rounded to the next possible value after adding all overhead (guard pages).
+		 * Keep in mind that most platforms treat exceeding the stack space like a segmentation fault and will terminate your program.
+		 * This stack_size is a final amount, unlike the normal thread stack it does not grow automatically.
+		 * \param function The function to execute when the fiber is started.
+		 * \param stack_size The requested stack size in bytes. This value is rounded up to the next page size.
+		 * \tparam FN 
+		 */
 		template<typename FN>
-		fiber(FN&& fn, size_t stack_size = 256 * 1024)
+		explicit fiber(FN&& function, size_t stack_size = 262144)
+			requires(!std::is_same_v<FN, fiber>)
 			: m_result(std::make_unique<std::optional<TReturn>>()),
-			  m_base([fn = std::forward<FN>(fn), res = m_result.get()]() { res->emplace(fn()); }, stack_size) {}
-		constexpr fiber() noexcept : m_result(nullptr), m_base() {}
+			  m_base([function = std::forward<FN>(function), res = m_result.get()]() { res->emplace(function()); }, stack_size) {}
+		/// \brief Construct an empty fiber handle
+		constexpr fiber() noexcept = default;
+		/// \brief Move constructor. The moved from handle will be empty.
 		fiber(fiber&& other) noexcept : m_result(std::move(other.m_result)), m_base(std::move(other.m_base)) {}
+		/// \brief Move constructor. The moved from handle will be empty.
 		fiber& operator=(fiber&& other) noexcept {
-			m_base = std::move(other.m_base);
-			m_result = std::move(other.m_result);
+			if(&other != this) {
+				m_base = std::move(other.m_base);
+				m_result = std::move(other.m_result);
+			}
 			return *this;
 		}
 		fiber(const fiber&) = delete;
 		fiber& operator=(const fiber&) = delete;
 
+		/**
+		 * \brief Await a standard C++20 coroutine awaitable.
+		 * 
+		 * Pauses the fiber till the awaited coroutine is done and returns the value generated by it.
+		 * \param awaiter The awaitable to await
+		 * \return The value generated by the awaitable
+		 */
 		template<typename T>
 		static auto fiber_await(T&& awaiter) {
 			return detail::fiber_await(std::forward<T>(awaiter));
 		}
 
+		/**
+		 * \brief Get an awaitable for this fiber.
+		 * \return auto An awaiter that is resumed once the fiber finishes
+		 */
 		auto await() & {
 			if (!m_result) throw std::logic_error("empty fiber");
 			struct awaiter {
 				decltype(m_base.operator co_await()) m_awaiter;
 				std::optional<TReturn>* m_result;
-				bool await_ready() const noexcept { return m_awaiter.await_ready(); }
-				coroutine_handle<> await_suspend(coroutine_handle<> hdl) const noexcept {
+				[[nodiscard]] bool await_ready() const noexcept { return m_awaiter.await_ready(); }
+				[[nodiscard]] coroutine_handle<> await_suspend(coroutine_handle<> hdl) const {
 					return m_awaiter.await_suspend(hdl);
 				}
 				auto await_resume() const noexcept {
@@ -960,13 +1038,17 @@ namespace asyncpp {
 			return awaiter{m_base.await(), m_result.get()};
 		}
 
+		/**
+		 * \brief Get an awaitable for this fiber.
+		 * \return auto An awaiter that is resumed once the fiber finishes
+		 */
 		auto await() && {
 			if (!m_result) throw std::logic_error("empty fiber");
 			struct awaiter {
 				decltype(m_base.operator co_await()) m_awaiter;
 				std::optional<TReturn>* m_result;
-				bool await_ready() const noexcept { return m_awaiter.await_ready(); }
-				coroutine_handle<> await_suspend(coroutine_handle<> hdl) const noexcept {
+				[[nodiscard]] bool await_ready() const noexcept { return m_awaiter.await_ready(); }
+				[[nodiscard]] coroutine_handle<> await_suspend(coroutine_handle<> hdl) const {
 					return m_awaiter.await_suspend(hdl);
 				}
 				auto await_resume() const noexcept {
@@ -977,12 +1059,20 @@ namespace asyncpp {
 			return awaiter{m_base.await(), m_result.get()};
 		}
 
+		/**
+		 * \brief Get an awaitable for this fiber.
+		 * \return auto An awaiter that is resumed once the fiber finishes
+		 */
 		auto operator co_await() & { return await(); }
+		/**
+		 * \brief Get an awaitable for this fiber.
+		 * \return auto An awaiter that is resumed once the fiber finishes
+		 */
 		auto operator co_await() && { return await(); }
 	};
 
 	template<typename FN>
-	fiber(FN&& fn) -> fiber<std::invoke_result_t<FN>>;
+	fiber(FN&&) -> fiber<std::invoke_result_t<FN>>;
 } // namespace asyncpp
 
 #if ASYNCPP_FIBER_KEYWORDS

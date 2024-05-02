@@ -2,7 +2,6 @@
 #include <asyncpp/event.h>
 #include <atomic>
 #include <cstddef>
-#include <cstdint>
 #include <limits>
 
 namespace asyncpp {
@@ -23,7 +22,7 @@ namespace asyncpp {
          * \brief Constructs a latch and initializes its internal counter.
          * \param initial The initial counter value
          */
-		latch(std::size_t initial) noexcept : m_count{initial}, m_event{initial <= 0} {}
+		explicit latch(std::size_t initial) noexcept : m_count{initial}, m_event{initial <= 0} {}
 
 		/// \brief latch is not copyable
 		latch(const latch&) = delete;
@@ -32,7 +31,7 @@ namespace asyncpp {
 		latch& operator=(const latch&) = delete;
 
 		/// \brief Check if the latch reached zero
-		bool is_ready() const noexcept { return m_event.is_set(); }
+		[[nodiscard]] bool is_ready() const noexcept { return m_event.is_set(); }
 
 		/**
          * \brief Decrement the latch counter
@@ -46,12 +45,12 @@ namespace asyncpp {
 		/**
          * \brief Wait for the counter to reach zero
          */
-		auto operator co_await() noexcept { return m_event.wait(dispatcher::current()); }
+		[[nodiscard]] auto operator co_await() noexcept { return m_event.wait(dispatcher::current()); }
 
 		/**
          * \brief Wait for the counter to reach zero
          */
-		auto wait(dispatcher* resume_dispatcher = nullptr) noexcept { return m_event.wait(resume_dispatcher); }
+		[[nodiscard]] auto wait(dispatcher* resume_dispatcher = nullptr) noexcept { return m_event.wait(resume_dispatcher); }
 
 	private:
 		std::atomic<std::size_t> m_count;
