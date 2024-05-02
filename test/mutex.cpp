@@ -2,9 +2,9 @@
 #include <asyncpp/mutex.h>
 #include <gtest/gtest.h>
 
+using asyncpp::eager_fire_and_forget_task;
 using asyncpp::mutex;
 using asyncpp::mutex_lock;
-using asyncpp::eager_fire_and_forget_task;
 
 TEST(ASYNCPP, Mutex) {
 	mutex mtx;

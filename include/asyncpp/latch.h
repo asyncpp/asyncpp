@@ -50,7 +50,9 @@ namespace asyncpp {
 		/**
          * \brief Wait for the counter to reach zero
          */
-		[[nodiscard]] auto wait(dispatcher* resume_dispatcher = nullptr) noexcept { return m_event.wait(resume_dispatcher); }
+		[[nodiscard]] auto wait(dispatcher* resume_dispatcher = nullptr) noexcept {
+			return m_event.wait(resume_dispatcher);
+		}
 
 	private:
 		std::atomic<std::size_t> m_count;

@@ -22,12 +22,14 @@ namespace asyncpp {
 		struct lock_awaiter;
 		struct scoped_lock_awaiter;
 		/// \brief Tag value used to construct locked mutex
-		constexpr static struct {} construct_locked{};
+		constexpr static struct {
+		} construct_locked{};
 		friend class mutex_lock;
 		/// \brief Construct mutex in its unlocked state
 		constexpr mutex() noexcept : m_state{state_unlocked}, m_awaiters{nullptr} {}
 		/// \brief Construct mutex in its locked state
-		explicit constexpr mutex(decltype(construct_locked)) noexcept : m_state{state_locked_no_waiters}, m_awaiters{nullptr} {}
+		explicit constexpr mutex(decltype(construct_locked)) noexcept
+			: m_state{state_locked_no_waiters}, m_awaiters{nullptr} {}
 		/**
          * \brief Destruct mutex
          *
@@ -79,7 +81,9 @@ namespace asyncpp {
          * \brief Query if the lock is currently locked
          * \warning This is unreliable if the mutex is used in multiple preemtive threads.
          */
-		[[nodiscard]] bool is_locked() const noexcept { return m_state.load(std::memory_order::relaxed) != state_unlocked; }
+		[[nodiscard]] bool is_locked() const noexcept {
+			return m_state.load(std::memory_order::relaxed) != state_unlocked;
+		}
 
 	private:
 		static constexpr std::uintptr_t state_locked_no_waiters = 0;
@@ -89,9 +93,7 @@ namespace asyncpp {
 	};
 
 	struct [[nodiscard]] mutex::lock_awaiter {
-		class mutex* mutex;
-		lock_awaiter* next{nullptr};
-		coroutine_handle<> handle{};
+		constexpr explicit lock_awaiter(class mutex* mtx) : mutex(mtx) {}
 		[[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
 		[[nodiscard]] bool await_suspend(coroutine_handle<> hndl) noexcept {
 			handle = hndl;
@@ -111,6 +113,10 @@ namespace asyncpp {
 			}
 		}
 		constexpr void await_resume() const noexcept {}
+
+		class mutex* mutex;
+		lock_awaiter* next{nullptr};
+		coroutine_handle<> handle{};
 	};
 
 	/**
@@ -178,12 +184,17 @@ namespace asyncpp {
 		[[nodiscard]] auto lock() noexcept {
 			struct awaiter {
 				explicit awaiter(mutex_lock* parent) : m_parent(parent), m_mutex_awaiter(parent->m_mtx) {}
-				[[nodiscard]] bool await_ready() const noexcept { return m_parent->m_locked || m_mutex_awaiter.await_ready(); }
-				[[nodiscard]] auto await_suspend(coroutine_handle<> hndl) noexcept { return m_mutex_awaiter.await_suspend(hndl); }
+				[[nodiscard]] bool await_ready() const noexcept {
+					return m_parent->m_locked || m_mutex_awaiter.await_ready();
+				}
+				[[nodiscard]] auto await_suspend(coroutine_handle<> hndl) noexcept {
+					return m_mutex_awaiter.await_suspend(hndl);
+				}
 				void await_resume() const noexcept {
 					m_mutex_awaiter.await_resume();
 					m_parent->m_locked = true;
 				}
+
 			private:
 				mutex_lock* m_parent;
 				mutex::lock_awaiter m_mutex_awaiter;
@@ -202,13 +213,16 @@ namespace asyncpp {
 	};
 
 	struct [[nodiscard]] mutex::scoped_lock_awaiter {
-		lock_awaiter awaiter;
+		constexpr explicit scoped_lock_awaiter(class mutex* mtx) : awaiter(mtx) {}
 		[[nodiscard]] constexpr bool await_ready() const noexcept { return awaiter.await_ready(); }
 		[[nodiscard]] bool await_suspend(coroutine_handle<> hndl) noexcept { return awaiter.await_suspend(hndl); }
 		[[nodiscard]] mutex_lock await_resume() const noexcept {
 			awaiter.await_resume();
 			return mutex_lock{*awaiter.mutex, std::adopt_lock};
 		}
+
+	private:
+		lock_awaiter awaiter;
 	};
 
 	constexpr inline mutex::lock_awaiter mutex::lock() noexcept { return lock_awaiter{this}; }

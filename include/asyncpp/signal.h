@@ -99,6 +99,7 @@ namespace asyncpp {
 	template<typename... TParams, typename TTraits>
 	class signal<void(TParams...), TTraits> {
 		struct node : detail::signal_node_base {
+			~node() noexcept override = default;
 			virtual void invoke(const TParams&...) = 0;
 
 			ref<node> next{};

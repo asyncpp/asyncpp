@@ -16,8 +16,8 @@ namespace asyncpp {
 			using reference_type = std::conditional_t<std::is_reference_v<T>, T, T&>;
 			using pointer_type = std::add_pointer_t<value_type>;
 
-			generator_promise() noexcept =default;
-			~generator_promise() =default;
+			generator_promise() noexcept = default;
+			~generator_promise() = default;
 			generator_promise(const generator_promise&) = delete;
 			generator_promise(generator_promise&&) = delete;
 

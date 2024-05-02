@@ -11,8 +11,8 @@
 asyncpp::task<int> async_main(int argc, const char** argv);
 //NOLINTNEXTLINE(misc-definitions-in-headers)
 int main(int argc, const char** argv) {
-	using asyncpp::simple_dispatcher;
 	using asyncpp::eager_fire_and_forget_task;
+	using asyncpp::simple_dispatcher;
 	simple_dispatcher disp;
 	std::pair<int, std::exception_ptr> result{-1, nullptr};
 	disp.push([&]() {

@@ -916,7 +916,7 @@ namespace asyncpp {
 		fiber(fiber&& other) noexcept : m_handle(std::exchange(other.m_handle, nullptr)) {}
 		/// \brief Move constructor. The moved from handle will be empty.
 		fiber& operator=(fiber&& other) noexcept {
-			if(&other != this) {
+			if (&other != this) {
 				if (m_handle) m_handle.destroy();
 				m_handle = std::exchange(other.m_handle, nullptr);
 			}
@@ -989,14 +989,15 @@ namespace asyncpp {
 		explicit fiber(FN&& function, size_t stack_size = 262144)
 			requires(!std::is_same_v<FN, fiber>)
 			: m_result(std::make_unique<std::optional<TReturn>>()),
-			  m_base([function = std::forward<FN>(function), res = m_result.get()]() { res->emplace(function()); }, stack_size) {}
+			  m_base([function = std::forward<FN>(function), res = m_result.get()]() { res->emplace(function()); },
+					 stack_size) {}
 		/// \brief Construct an empty fiber handle
 		constexpr fiber() noexcept = default;
 		/// \brief Move constructor. The moved from handle will be empty.
 		fiber(fiber&& other) noexcept : m_result(std::move(other.m_result)), m_base(std::move(other.m_base)) {}
 		/// \brief Move constructor. The moved from handle will be empty.
 		fiber& operator=(fiber&& other) noexcept {
-			if(&other != this) {
+			if (&other != this) {
 				m_base = std::move(other.m_base);
 				m_result = std::move(other.m_result);
 			}

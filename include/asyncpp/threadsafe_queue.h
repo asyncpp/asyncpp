@@ -14,8 +14,8 @@ namespace asyncpp {
 	 */
 	template<typename T, typename Container = std::deque<T>>
 	class threadsafe_queue {
-		std::mutex m_mutex {};
-		std::queue<T, Container> m_queue {};
+		std::mutex m_mutex{};
+		std::queue<T, Container> m_queue{};
 
 	public:
 		/**
@@ -35,7 +35,7 @@ namespace asyncpp {
 			m_queue = std::move(other.m_queue);
 		}
 		threadsafe_queue& operator=(const threadsafe_queue& other) {
-			if(&other != this) {
+			if (&other != this) {
 				std::scoped_lock lck{other.m_mutex, m_mutex};
 				m_queue = other.m_queue;
 			}
@@ -43,7 +43,7 @@ namespace asyncpp {
 		}
 		//NOLINTNEXTLINE(performance-noexcept-move-constructor)
 		threadsafe_queue& operator=(threadsafe_queue&& other) {
-			if(&other != this) {
+			if (&other != this) {
 				std::scoped_lock lck{other.m_mutex, m_mutex};
 				m_queue = std::move(other.m_queue);
 			}

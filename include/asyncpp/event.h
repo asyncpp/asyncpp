@@ -309,7 +309,8 @@ namespace asyncpp {
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
          */
-		explicit constexpr multi_consumer_event(bool set_initially = false) noexcept : m_state(set_initially ? this : nullptr) {}
+		explicit constexpr multi_consumer_event(bool set_initially = false) noexcept
+			: m_state(set_initially ? this : nullptr) {}
 #ifndef NDEBUG
 		~multi_consumer_event() noexcept { assert(!is_awaited()); }
 #endif

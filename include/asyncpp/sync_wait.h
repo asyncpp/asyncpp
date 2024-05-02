@@ -58,6 +58,7 @@ namespace asyncpp {
 	 * This can be used to synchronously wait for the result of a coroutine.
 	 */
 	auto as_promise(auto&& awaiter) {
-		return as_promise<typename detail::await_return_type<std::remove_cvref_t<decltype(awaiter)>>::type>(std::forward<decltype(awaiter)>(awaiter));
+		return as_promise<typename detail::await_return_type<std::remove_cvref_t<decltype(awaiter)>>::type>(
+			std::forward<decltype(awaiter)>(awaiter));
 	}
 } // namespace asyncpp

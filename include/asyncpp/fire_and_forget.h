@@ -44,7 +44,9 @@ namespace asyncpp {
 				auto final_suspend() noexcept {
 					struct awaiter {
 						promise_type* self;
-						[[nodiscard]] constexpr bool await_ready() const noexcept { return self->m_ref_count.fetch_sub(1) == 1; }
+						[[nodiscard]] constexpr bool await_ready() const noexcept {
+							return self->m_ref_count.fetch_sub(1) == 1;
+						}
 						void await_suspend(coroutine_handle<>) const noexcept {}
 						constexpr void await_resume() const noexcept {}
 					};
@@ -78,7 +80,8 @@ namespace asyncpp {
 			fire_and_forget_task_impl(coroutine_handle<promise_type> hndl) noexcept : m_coro(hndl) {}
 
 			/// \brief Move constructor
-			fire_and_forget_task_impl(fire_and_forget_task_impl&& other) noexcept : m_coro(std::exchange(other.m_coro, {})) {}
+			fire_and_forget_task_impl(fire_and_forget_task_impl&& other) noexcept
+				: m_coro(std::exchange(other.m_coro, {})) {}
 
 			/// \brief Move assignment
 			fire_and_forget_task_impl& operator=(fire_and_forget_task_impl&& other) noexcept {
@@ -91,7 +94,7 @@ namespace asyncpp {
 			}
 
 			fire_and_forget_task_impl& operator=(const fire_and_forget_task_impl& other) {
-				if(&other != this) {
+				if (&other != this) {
 					if (m_coro) m_coro.promise().unref();
 					m_coro = other.m_coro;
 					if (m_coro) m_coro.promise().ref();
