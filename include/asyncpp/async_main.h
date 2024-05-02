@@ -9,12 +9,14 @@
 #include <asyncpp/task.h>
 
 asyncpp::task<int> async_main(int argc, const char** argv);
+//NOLINTNEXTLINE(misc-definitions-in-headers)
 int main(int argc, const char** argv) {
-	using namespace asyncpp;
-	simple_dispatcher dp;
+	using asyncpp::eager_fire_and_forget_task;
+	using asyncpp::simple_dispatcher;
+	simple_dispatcher disp;
 	std::pair<int, std::exception_ptr> result{-1, nullptr};
-	dp.push([&]() {
-		[](simple_dispatcher* dp, std::pair<int, std::exception_ptr>& result, int argc,
+	disp.push([&]() {
+		[](simple_dispatcher* disp, std::pair<int, std::exception_ptr>& result, int argc,
 		   const char** argv) -> eager_fire_and_forget_task<> {
 			try {
 				result.first = co_await async_main(argc, argv);
@@ -22,10 +24,10 @@ int main(int argc, const char** argv) {
 				result.second = std::current_exception();
 				result.first = -1;
 			}
-			dp->stop();
-		}(&dp, result, argc, argv);
+			disp->stop();
+		}(&disp, result, argc, argv);
 	});
-	dp.run();
+	disp.run();
 	if (result.second) std::rethrow_exception(result.second);
 	return result.first;
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
 #include <asyncpp/ref.h>
+
 #include <cassert>
 #include <condition_variable>
 #include <cstddef>
@@ -35,20 +36,20 @@ namespace asyncpp {
 				m_value.template emplace<fulfilled_index>(std::forward<decltype(value)>(value));
 				m_cv.notify_all();
 				auto settle_cbs = std::move(m_on_settle);
-				auto fullfil_cbs = std::move(m_on_fulfill);
+				auto fulfill_cbs = std::move(m_on_fulfill);
 				m_on_settle.clear();
 				m_on_fulfill.clear();
 				m_on_reject.clear();
 				auto& res = std::get<fulfilled_index>(m_value);
 				lck.unlock();
-				for (auto& e : settle_cbs) {
+				for (auto& cbfn : settle_cbs) {
 					try {
-						e();
+						cbfn();
 					} catch (...) { std::terminate(); }
 				}
-				for (auto& e : fullfil_cbs) {
+				for (auto& cbfn : fulfill_cbs) {
 					try {
-						e(res);
+						cbfn(res);
 					} catch (...) { std::terminate(); }
 				}
 				return true;
@@ -66,17 +67,46 @@ namespace asyncpp {
 				m_on_reject.clear();
 				auto& error = std::get<rejected_index>(m_value);
 				lck.unlock();
-				for (auto& e : settle_cbs) {
+				for (auto& cbfn : settle_cbs) {
 					try {
-						e();
+						cbfn();
 					} catch (...) { std::terminate(); }
 				}
-				for (auto& e : reject_cbs) {
+				for (auto& cbfn : reject_cbs) {
 					try {
-						e(error);
+						cbfn(error);
 					} catch (...) { std::terminate(); }
 				}
 				return true;
+			}
+
+			void then(std::function<void(const T&)> then_cb, std::function<void(const TError&)> catch_cb) {
+				std::unique_lock lck{m_mtx};
+				switch (m_value.index()) {
+				case pending_index:
+					if (then_cb) m_on_fulfill.emplace_back(std::move(then_cb));
+					if (catch_cb) m_on_reject.emplace_back(std::move(catch_cb));
+					break;
+				case fulfilled_index:
+					lck.unlock();
+					if (then_cb) then_cb(std::get<fulfilled_index>(m_value));
+					break;
+				case rejected_index:
+					lck.unlock();
+					if (catch_cb) catch_cb(std::get<rejected_index>(m_value));
+					break;
+				}
+			}
+
+			void on_settle(std::function<void()> settle_cb) {
+				if (!settle_cb) return;
+				std::unique_lock lck{m_mtx};
+				if (m_value.index() == pending_index)
+					m_on_settle.emplace_back(std::move(settle_cb));
+				else {
+					lck.unlock();
+					settle_cb();
+				}
 			}
 		};
 
@@ -105,7 +135,7 @@ namespace asyncpp {
 		promise(const promise& other) : m_state{other.m_state} {}
 		/// \brief Copy assignment
 		promise& operator=(const promise& other) {
-			m_state = other.m_state;
+			if (&other != this) m_state = other.m_state;
 			return *this;
 		}
 
@@ -206,54 +236,27 @@ namespace asyncpp {
          */
 		void then(std::function<void(const TResult&)> then_cb,
 				  std::function<void(const std::exception_ptr&)> catch_cb) {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			switch (s.m_value.index()) {
-			case state::pending_index:
-				if (then_cb) s.m_on_fulfill.emplace_back(std::move(then_cb));
-				if (catch_cb) s.m_on_reject.emplace_back(std::move(catch_cb));
-				break;
-			case state::fulfilled_index:
-				lck.unlock();
-				if (then_cb) then_cb(std::get<state::fulfilled_index>(s.m_value));
-				break;
-			case state::rejected_index:
-				lck.unlock();
-				if (catch_cb) catch_cb(std::get<state::rejected_index>(s.m_value));
-				break;
-			}
+			m_state->then(std::move(then_cb), std::move(catch_cb));
 		}
 
 		/**
          * \brief Register a callback to be executed once a result is available. If the promise is not pending the callback is directly executed.
          * \param cb Callback to invoke as soon as a result is available.
          */
-		void on_settle(std::function<void()> settle_cb) {
-			if (!settle_cb) return;
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			if (s.m_value.index() == state::pending_index)
-				s.m_on_settle.emplace_back(std::move(settle_cb));
-			else {
-				lck.unlock();
-				settle_cb();
-			}
-		}
+		void on_settle(std::function<void()> settle_cb) { m_state->on_settle(std::move(settle_cb)); }
 
 		/**
          * \brief Synchronously get the result. If the promise is rejected the rejecting exception gets thrown.
          * \return TResult& Reference to the result value
          */
-		TResult& get() const {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			while (s.m_value.index() == state::pending_index) {
-				s.m_cv.wait(lck);
+		[[nodiscard]] TResult& get() const {
+			state& info = *m_state;
+			std::unique_lock lck{info.m_mtx};
+			while (info.m_value.index() == state::pending_index) {
+				info.m_cv.wait(lck);
 			}
-			if (s.m_value.index() == state::fulfilled_index)
-				return std::get<state::fulfilled_index>(s.m_value);
-			else
-				std::rethrow_exception(std::get<state::rejected_index>(s.m_value));
+			if (info.m_value.index() == state::fulfilled_index) return std::get<state::fulfilled_index>(info.m_value);
+			std::rethrow_exception(std::get<state::rejected_index>(info.m_value));
 		}
 
 		/**
@@ -261,37 +264,34 @@ namespace asyncpp {
          * \return TResult* Pointer to the result value or nullptr on timeout
          */
 		template<class Rep, class Period>
-		TResult* get(std::chrono::duration<Rep, Period> timeout) const {
-			auto tp = std::chrono::steady_clock::now() + timeout;
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			if (!s.m_cv.wait_until(lck, tp, [&s]() { return s.m_value.index() != state::pending_index; }))
+		[[nodiscard]] TResult* get(std::chrono::duration<Rep, Period> timeout) const {
+			auto until = std::chrono::steady_clock::now() + timeout;
+			state& info = *m_state;
+			std::unique_lock lck{info.m_mtx};
+			if (!info.m_cv.wait_until(lck, until, [&info]() { return info.m_value.index() != state::pending_index; }))
 				return nullptr;
-			if (s.m_value.index() == state::fulfilled_index)
-				return &std::get<state::fulfilled_index>(s.m_value);
-			else
-				std::rethrow_exception(std::get<state::rejected_index>(s.m_value));
+			if (info.m_value.index() == state::fulfilled_index) return &std::get<state::fulfilled_index>(info.m_value);
+			std::rethrow_exception(std::get<state::rejected_index>(info.m_value));
 		}
 
 		/**
          * \brief Synchronously try get the result. If the promise is rejected the rejecting exception gets thrown.
          * \return TResult* Pointer to the result value or nullptr on timeout
          */
-		std::pair<TResult*, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
-			state& s = *m_state;
-			std::unique_lock lck{s.m_mtx};
-			if (s.m_value.index() == state::pending_index) return {nullptr, nullptr};
-			if (s.m_value.index() == state::fulfilled_index)
-				return {&std::get<state::fulfilled_index>(s.m_value), nullptr};
-			else
-				return {nullptr, std::get<state::rejected_index>(s.m_value)};
+		[[nodiscard]] std::pair<TResult*, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
+			state& info = *m_state;
+			std::unique_lock lck{info.m_mtx};
+			if (info.m_value.index() == state::pending_index) return {nullptr, nullptr};
+			if (info.m_value.index() == state::fulfilled_index)
+				return {&std::get<state::fulfilled_index>(info.m_value), nullptr};
+			return {nullptr, std::get<state::rejected_index>(info.m_value)};
 		}
 
 		/**
          * \brief Synchronously try get the result. If the promise is rejected the rejecting exception gets thrown.
          * \return TResult* Pointer to the result value or nullptr on timeout
          */
-		TResult* try_get() const {
+		[[nodiscard]] TResult* try_get() const {
 			auto res = try_get(std::nothrow);
 			if (res.second) std::rethrow_exception(std::move(res.second));
 			return res.first;
@@ -301,32 +301,31 @@ namespace asyncpp {
          * \brief Asynchronously get the result. If the promise is rejected the rejecting exception gets thrown.
          * \return TResult& Pointer to the result value
          */
-		auto operator co_await() const noexcept {
+		[[nodiscard]] auto operator co_await() const noexcept {
 			struct awaiter {
 				constexpr explicit awaiter(ref<state> state) : m_state(std::move(state)) {}
-				constexpr bool await_ready() noexcept {
+				[[nodiscard]] constexpr bool await_ready() noexcept {
 					assert(m_state);
 					std::unique_lock lck{m_state->m_mtx};
 					return m_state->m_value.index() != state::pending_index;
 				}
-				bool await_suspend(coroutine_handle<> h) noexcept {
+				[[nodiscard]] bool await_suspend(coroutine_handle<> hndl) noexcept {
 					assert(m_state);
-					assert(h);
+					assert(hndl);
 					std::unique_lock lck{m_state->m_mtx};
 					if (m_state->m_value.index() == state::pending_index) {
-						m_state->m_on_settle.emplace_back([h]() mutable { h.resume(); });
+						m_state->m_on_settle.emplace_back([hndl]() mutable { hndl.resume(); });
 						return true;
-					} else
-						return false;
+					}
+					return false;
 				}
-				TResult& await_resume() {
+				[[nodiscard]] TResult& await_resume() {
 					assert(m_state);
 					std::unique_lock lck{m_state->m_mtx};
 					assert(m_state->m_value.index() != state::pending_index);
 					if (m_state->m_value.index() == state::fulfilled_index)
 						return std::get<state::fulfilled_index>(m_state->m_value);
-					else
-						std::rethrow_exception(std::get<state::rejected_index>(m_state->m_value));
+					std::rethrow_exception(std::get<state::rejected_index>(m_state->m_value));
 				}
 
 			private:
@@ -341,7 +340,7 @@ namespace asyncpp {
          * \param value Value for the fulfilled promise
          * \return A promise in its fulfilled state
          */
-		static promise make_fulfilled(TResult&& value) {
+		[[nodiscard]] static promise make_fulfilled(TResult&& value) {
 			promise res;
 			res.fulfill(std::forward<decltype(value)>(value));
 			return res;
@@ -349,12 +348,12 @@ namespace asyncpp {
 
 		/**
          * \brief Get a rejected promise with the specified exception
-         * \param ex Exception to store in the rejected promise
+         * \param exception Exception to store in the rejected promise
          * \return A promise in its rejected state
          */
-		static promise make_rejected(std::exception_ptr ex) {
+		[[nodiscard]] static promise make_rejected(std::exception_ptr exception) {
 			promise res;
-			res.reject(ex);
+			res.reject(std::move(exception));
 			return res;
 		}
 
@@ -365,7 +364,7 @@ namespace asyncpp {
          * \return A promise in its rejected state
          */
 		template<typename TException, typename... Args>
-		static promise make_rejected(Args&&... args) {
+		[[nodiscard]] static promise make_rejected(Args&&... args) {
 			promise res;
 			res.reject<TException, Args...>(std::forward<Args>(args)...);
 			return res;
@@ -396,32 +395,32 @@ namespace asyncpp {
 		using promise<std::monostate>::on_settle;
 
 		void fulfill() { promise<std::monostate>::fulfill(std::monostate{}); }
-		bool try_fulfill() { return promise<std::monostate>::try_fulfill(std::monostate{}); }
+		[[nodiscard]] bool try_fulfill() { return promise<std::monostate>::try_fulfill(std::monostate{}); }
 
 		void then(std::function<void()> then_cb, std::function<void(const std::exception_ptr&)> catch_cb) {
-			std::function<void(const std::monostate&)> cb{};
-			if (then_cb) cb = [cb = std::move(then_cb)](const std::monostate&) { cb(); };
-			promise<std::monostate>::then(cb, std::move(catch_cb));
+			std::function<void(const std::monostate&)> cbfn{};
+			if (then_cb) cbfn = [cbfn = std::move(then_cb)](const std::monostate&) { cbfn(); };
+			promise<std::monostate>::then(cbfn, std::move(catch_cb));
 		}
 
-		void get() const { promise<std::monostate>::get(); }
+		void get() const { static_cast<void>(promise<std::monostate>::get()); }
 		template<class Rep, class Period>
-		bool get(std::chrono::duration<Rep, Period> timeout) const {
+		[[nodiscard]] bool get(std::chrono::duration<Rep, Period> timeout) const {
 			return promise<std::monostate>::get(timeout) != nullptr;
 		}
 
-		std::pair<bool, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
+		[[nodiscard]] std::pair<bool, std::exception_ptr> try_get(std::nothrow_t) const noexcept {
 			auto res = promise<std::monostate>::try_get(std::nothrow);
 			if (res.second) return {true, res.second};
 			return {res.first != nullptr, nullptr};
 		}
-		bool try_get() const {
+		[[nodiscard]] bool try_get() const {
 			auto res = promise<std::monostate>::try_get(std::nothrow);
 			if (res.second) std::rethrow_exception(std::move(res.second));
 			return res.first != nullptr;
 		}
 
-		auto operator co_await() const noexcept {
+		[[nodiscard]] auto operator co_await() const noexcept {
 			struct awaiter {
 			private:
 				decltype(std::declval<promise<std::monostate>>().operator co_await()) m_awaiter;
@@ -429,25 +428,27 @@ namespace asyncpp {
 			public:
 				constexpr explicit awaiter(decltype(m_awaiter)&& awaiter)
 					: m_awaiter(std::forward<decltype(awaiter)>(awaiter)) {}
-				constexpr bool await_ready() noexcept { return m_awaiter.await_ready(); }
-				bool await_suspend(coroutine_handle<> h) noexcept { return m_awaiter.await_suspend(h); }
-				void await_resume() { m_awaiter.await_resume(); }
+				[[nodiscard]] constexpr bool await_ready() noexcept { return m_awaiter.await_ready(); }
+				[[nodiscard]] bool await_suspend(coroutine_handle<> hndl) noexcept {
+					return m_awaiter.await_suspend(hndl);
+				}
+				void await_resume() { static_cast<void>(m_awaiter.await_resume()); }
 			};
 			return awaiter{promise<std::monostate>::operator co_await()};
 		}
 
-		static promise make_fulfilled() {
+		[[nodiscard]] static promise make_fulfilled() {
 			promise res;
 			res.fulfill();
 			return res;
 		}
-		static promise make_rejected(std::exception_ptr ex) {
+		[[nodiscard]] static promise make_rejected(std::exception_ptr exception) {
 			promise res;
-			res.reject(ex);
+			res.reject(std::move(exception));
 			return res;
 		}
 		template<typename TException, typename... Args>
-		static promise make_rejected(Args&&... args) {
+		[[nodiscard]] static promise make_rejected(Args&&... args) {
 			promise res;
 			res.reject<TException, Args...>(std::forward<Args>(args)...);
 			return res;
@@ -467,11 +468,14 @@ namespace asyncpp {
 	 */
 	template<typename T, typename... TArgs>
 	inline promise<T> promise_first(promise<TArgs>... args) {
-		promise<T> p;
-		(args.then([p](const typename promise<TArgs>::result_type& res) mutable { p.try_fulfill(res); },
-				   [p](const std::exception_ptr& ex) mutable { p.try_reject(ex); }),
+		promise<T> result_promise;
+		(args.then(
+			 [result_promise](const typename promise<TArgs>::result_type& res) mutable {
+				 result_promise.try_fulfill(res);
+			 },
+			 [result_promise](const std::exception_ptr& exception) mutable { result_promise.try_reject(exception); }),
 		 ...);
-		return p;
+		return result_promise;
 	}
 
 	/**
@@ -487,18 +491,18 @@ namespace asyncpp {
 	 */
 	template<typename T, typename... TArgs>
 	static promise<T> promise_first_successful(promise<TArgs>... args) {
-		promise<T> p;
+		promise<T> result_promise;
 		auto finished = std::make_shared<std::atomic<size_t>>(0);
 		(args.then(
-			 [p, finished](const typename promise<TArgs>::result_type& res) mutable {
+			 [result_promise, finished](const typename promise<TArgs>::result_type& res) mutable {
 				 finished->fetch_add(1);
-				 p.try_fulfill(res);
+				 result_promise.try_fulfill(res);
 			 },
-			 [p, finished](const std::exception_ptr& e) mutable {
-				 if (finished->fetch_add(1) + 1 == sizeof...(args)) p.try_reject(e);
+			 [result_promise, finished](const std::exception_ptr& exception) mutable {
+				 if (finished->fetch_add(1) + 1 == sizeof...(args)) result_promise.try_reject(exception);
 			 }),
 		 ...);
-		return p;
+		return result_promise;
 	}
 
 	/**
@@ -511,17 +515,15 @@ namespace asyncpp {
 	template<typename... TArgs>
 	static promise<void> promise_all(promise<TArgs>... args) {
 		struct state {
-			size_t total{};
 			std::atomic<size_t> count{};
 			promise<void> result;
 		};
-		auto s = std::make_shared<state>();
-		s->total = sizeof...(args);
-		(args.on_settle([s]() mutable {
-			auto curid = s->count.fetch_add(1);
-			if (curid + 1 == s->total) { s->result.fulfill(); }
+		auto shared = std::make_shared<state>();
+		(args.on_settle([shared]() mutable {
+			auto curid = shared->count.fetch_add(1);
+			if (curid + 1 == sizeof...(args)) { shared->result.fulfill(); }
 		}),
 		 ...);
-		return s->result;
+		return shared->result;
 	}
 } // namespace asyncpp

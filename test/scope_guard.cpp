@@ -3,10 +3,6 @@
 
 using namespace asyncpp;
 
-namespace {
-	void sample_noexcept_fn() noexcept;
-}
-
 TEST(ASYNCPP, ScopeGuard) {
 	static bool did_call;
 	did_call = false;

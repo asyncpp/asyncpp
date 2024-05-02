@@ -1,5 +1,10 @@
+/**
+ * \file stop_token.h
+ * \brief Polyfill implementation of std::stop_token and friends. Check the documentation of the stl version for details.
+ */
 #pragma once
 #ifndef ASYNCPP_FORCE_CUSTOM_STOP_TOKEN
+/// \brief Force Asyncpp to use its polyfill implementation of std::stop_token even if the stl provides one.
 #define ASYNCPP_FORCE_CUSTOM_STOP_TOKEN 0
 #endif
 

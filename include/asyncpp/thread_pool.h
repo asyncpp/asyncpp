@@ -29,7 +29,7 @@ namespace asyncpp {
 		 * \brief Construct a new thread pool
 		 * \param initial_size The initial number of threads to spawn
 		 */
-		thread_pool(size_t initial_size = std::thread::hardware_concurrency()) { this->resize(initial_size); }
+		explicit thread_pool(size_t initial_size = std::thread::hardware_concurrency()) { this->resize(initial_size); }
 		~thread_pool() { this->resize(0); }
 		thread_pool(const thread_pool&) = delete;
 		thread_pool& operator=(const thread_pool&) = delete;
@@ -38,18 +38,18 @@ namespace asyncpp {
 		 * \brief Push a callback into the pool
 		 * \param fn The callback to execute on the pool
 		 */
-		void push(std::function<void()> fn) override {
-			if (!fn) return;
-			if (g_current_thread) {
+		void push(std::function<void()> cbfn) override {
+			if (!cbfn) return;
+			if (g_current_thread != nullptr) {
 				std::unique_lock lck{g_current_thread->mutex};
-				g_current_thread->queue.emplace(std::move(fn));
+				g_current_thread->queue.emplace(std::move(cbfn));
 			} else {
 				std::shared_lock lck{m_threads_mtx};
 				auto size = m_valid_size.load();
 				if (size == 0) throw std::runtime_error("pool is shutting down");
 				auto thread = m_threads[g_queue_rand() % size].get();
 				std::unique_lock lck2{thread->mutex};
-				thread->queue.emplace(std::move(fn));
+				thread->queue.emplace(std::move(cbfn));
 				thread->cv.notify_one();
 			}
 		}
@@ -114,15 +114,15 @@ namespace asyncpp {
 				if (!pool->m_threads_mtx.try_lock_shared()) return {};
 				std::shared_lock lck{pool->m_threads_mtx, std::adopt_lock};
 				for (size_t i = 0; i < pool->m_valid_size; i++) {
-					auto& e = pool->m_threads[i];
-					if (e.get() == this || e == nullptr) continue;
+					auto& thread = pool->m_threads[i];
+					if (thread.get() == this || thread == nullptr) continue;
 					// if the other thread is currently locked skip it, we dont wanna wait too long
-					if (!e->mutex.try_lock()) continue;
-					std::unique_lock th_lck{e->mutex, std::adopt_lock};
-					if (e->queue.empty()) continue;
-					auto cb = std::move(e->queue.front());
-					e->queue.pop();
-					return cb;
+					if (!thread->mutex.try_lock()) continue;
+					std::unique_lock th_lck{thread->mutex, std::adopt_lock};
+					if (thread->queue.empty()) continue;
+					auto cbfn = std::move(thread->queue.front());
+					thread->queue.pop();
+					return cbfn;
 				}
 				return {};
 			}
@@ -140,16 +140,16 @@ namespace asyncpp {
 					{
 						std::unique_lock lck{mutex};
 						while (!queue.empty()) {
-							auto cb = std::move(queue.front());
+							auto cbfn = std::move(queue.front());
 							queue.pop();
 							lck.unlock();
-							cb();
+							cbfn();
 							lck.lock();
 						}
 					}
 					if (thread_index >= pool->m_target_size) break;
-					if (auto cb = try_steal_task(); cb) {
-						cb();
+					if (auto cbfn = try_steal_task(); cbfn) {
+						cbfn();
 						continue;
 					}
 					if (thread_index < pool->m_target_size) {
@@ -160,9 +160,9 @@ namespace asyncpp {
 				std::unique_lock lck{mutex};
 				g_current_thread = nullptr;
 				while (!queue.empty()) {
-					auto& cb = queue.front();
+					auto& cbfn = queue.front();
 					lck.unlock();
-					cb();
+					cbfn();
 					lck.lock();
 					queue.pop();
 				}
@@ -173,6 +173,7 @@ namespace asyncpp {
 		inline static thread_local thread_state* g_current_thread{nullptr};
 		// This makes the conversion explicit to avoid compiler warning/error; only, should the hash not fit in an unsigned int, an error would occur;
 		// Would it be worth it to create a function to convert and check if hash <= unsigned_int?
+		//NOLINTNEXTLINE(cert-err58-cpp)
 		inline static thread_local std::minstd_rand g_queue_rand{
 			static_cast<unsigned int>(std::hash<std::thread::id>{}(std::this_thread::get_id()))};
 		std::atomic<size_t> m_target_size{0};

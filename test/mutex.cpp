@@ -1,10 +1,10 @@
 #include <asyncpp/fire_and_forget.h>
 #include <asyncpp/mutex.h>
 #include <gtest/gtest.h>
-#include <mutex>
-#include <stdexcept>
 
-using namespace asyncpp;
+using asyncpp::eager_fire_and_forget_task;
+using asyncpp::mutex;
+using asyncpp::mutex_lock;
 
 TEST(ASYNCPP, Mutex) {
 	mutex mtx;
@@ -69,7 +69,7 @@ TEST(ASYNCPP, MutexLock) {
 		lck.unlock();
 		ASSERT_FALSE(lck.is_locked());
 		ASSERT_FALSE(mtx.is_locked());
-		mtx.try_lock();
+		ASSERT_TRUE(mtx.try_lock());
 		ASSERT_FALSE(lck.is_locked());
 		ASSERT_TRUE(mtx.is_locked());
 		ASSERT_FALSE(lck.try_lock());

@@ -30,8 +30,8 @@ namespace asyncpp::detail {
 								  std::is_constructible_v<allocator_type, decltype(alloc)>,
 							  "last argument is not of allocator type");
 				auto ptr = std::allocator_traits<allocator_type>::allocate(alloc, size + sizeof(allocator_type));
-				auto x = new (ptr) allocator_type{std::move(alloc)};
-				return x + 1;
+				auto aptr = new (ptr) allocator_type{std::move(alloc)};
+				return aptr + 1;
 			}
 		}
 		void operator delete(void* ptr, size_t size) {

@@ -16,11 +16,12 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<size_t ID, typename T>
-	void* ptr_tag(T* v) noexcept
+	void* ptr_tag(T* ptr) noexcept
 		requires(alignof(T) > ID)
 	{
-		assert((reinterpret_cast<uintptr_t>(v) & (alignof(T) - 1)) == 0);
-		return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(v) | ID);
+		assert((reinterpret_cast<uintptr_t>(ptr) & (alignof(T) - 1)) == 0);
+		//NOLINTNEXTLINE(performance-no-int-to-ptr)
+		return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) | ID);
 	}
 
 	/**
@@ -31,10 +32,10 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<auto ID, typename T>
-	void* ptr_tag(T* v) noexcept
+	void* ptr_tag(T* ptr) noexcept
 		requires(std::is_enum_v<decltype(ID)>)
 	{
-		return ptr_tag<static_cast<size_t>(ID), T>(v);
+		return ptr_tag<static_cast<size_t>(ID), T>(ptr);
 	}
 
 	/**
@@ -45,11 +46,12 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<size_t ID, typename T>
-	const void* ptr_tag(const T* v) noexcept
+	const void* ptr_tag(const T* ptr) noexcept
 		requires(alignof(T) > ID)
 	{
-		assert((reinterpret_cast<uintptr_t>(v) & (alignof(T) - 1)) == 0);
-		return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(v) | ID);
+		assert((reinterpret_cast<uintptr_t>(ptr) & (alignof(T) - 1)) == 0);
+		//NOLINTNEXTLINE(performance-no-int-to-ptr)
+		return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(ptr) | ID);
 	}
 
 	/**
@@ -60,10 +62,10 @@ namespace asyncpp {
 	 * \return The tagged pointer
 	 */
 	template<auto ID, typename T>
-	const void* ptr_tag(const T* v) noexcept
+	const void* ptr_tag(const T* ptr) noexcept
 		requires(std::is_enum_v<decltype(ID)>)
 	{
-		return ptr_tag<static_cast<size_t>(ID), T>(v);
+		return ptr_tag<static_cast<size_t>(ID), T>(ptr);
 	}
 
 	/**
@@ -73,10 +75,10 @@ namespace asyncpp {
 	 * \return pair of pointer and tag
 	 */
 	template<typename T>
-	std::pair<T*, size_t> ptr_untag(void* v) noexcept {
+	std::pair<T*, size_t> ptr_untag(void* ptr) noexcept {
 		const auto align_mask = static_cast<uintptr_t>(alignof(T) - 1);
-		auto x = reinterpret_cast<uintptr_t>(v);
-		return {reinterpret_cast<T*>(x & ~align_mask), x & align_mask};
+		auto uptr = reinterpret_cast<uintptr_t>(ptr);
+		return {reinterpret_cast<T*>(uptr & ~align_mask), uptr & align_mask};
 	}
 
 	/**
@@ -87,8 +89,8 @@ namespace asyncpp {
 	 * \return pair of pointer and tag
 	 */
 	template<typename T, typename TTag>
-	std::pair<T*, TTag> ptr_untag(void* v) noexcept {
-		auto [ptr, tag] = ptr_untag<T>(v);
+	std::pair<T*, TTag> ptr_untag(void* vptr) noexcept {
+		auto [ptr, tag] = ptr_untag<T>(vptr);
 		return {ptr, static_cast<TTag>(tag)};
 	}
 
@@ -99,10 +101,10 @@ namespace asyncpp {
 	 * \return pair of pointer and tag
 	 */
 	template<typename T>
-	std::pair<const T*, size_t> ptr_untag(const void* v) noexcept {
+	std::pair<const T*, size_t> ptr_untag(const void* vptr) noexcept {
 		const auto align_mask = static_cast<uintptr_t>(alignof(T) - 1);
-		auto x = reinterpret_cast<uintptr_t>(v);
-		return {reinterpret_cast<const T*>(x & ~align_mask), x & align_mask};
+		auto uptr = reinterpret_cast<uintptr_t>(vptr);
+		return {reinterpret_cast<const T*>(uptr & ~align_mask), uptr & align_mask};
 	}
 
 	/**
@@ -113,8 +115,8 @@ namespace asyncpp {
 	 * \return pair of pointer and tag
 	 */
 	template<typename T, typename TTag>
-	std::pair<const T*, TTag> ptr_untag(const void* v) noexcept {
-		auto [ptr, tag] = ptr_untag<T>(v);
+	std::pair<const T*, TTag> ptr_untag(const void* vptr) noexcept {
+		auto [ptr, tag] = ptr_untag<T>(vptr);
 		return {ptr, static_cast<TTag>(tag)};
 	}
 
@@ -137,9 +139,9 @@ namespace asyncpp {
 	 * \note This is useful if the tag is used to decide the type of the pointer.
 	 */
 	template<typename... T>
-	size_t ptr_get_tag(const void* v) noexcept {
+	size_t ptr_get_tag(const void* vptr) noexcept {
 		constexpr auto align_mask = static_cast<uintptr_t>(min_alignof<T...>() - 1);
-		return reinterpret_cast<uintptr_t>(v) & align_mask;
+		return reinterpret_cast<uintptr_t>(vptr) & align_mask;
 	}
 
 } // namespace asyncpp

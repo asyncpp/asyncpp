@@ -12,26 +12,30 @@ namespace asyncpp {
      * \brief A very basic dispatcher that runs in a single thread until manually stopped.
      */
 	class simple_dispatcher : public dispatcher {
-		std::mutex mtx;
-		std::condition_variable cv;
-		std::deque<std::function<void()>> queue;
-		std::atomic<bool> done = false;
+		std::mutex m_mtx;
+		std::condition_variable m_cv;
+		std::deque<std::function<void()>> m_queue;
+		std::atomic<bool> m_done = false;
 
 	public:
-		void push(std::function<void()> fn) override {
-			if (!fn) return;
-			std::unique_lock lck{mtx};
-			queue.emplace_back(std::move(fn));
-			cv.notify_all();
+		/**
+		 * \brief Push a function to be executed on the dispatcher.
+		 * \param cbfn The callback
+		 */
+		void push(std::function<void()> cbfn) override {
+			if (!cbfn) return;
+			std::unique_lock lck{m_mtx};
+			m_queue.emplace_back(std::move(cbfn));
+			m_cv.notify_all();
 		}
 
 		/**
          * \brief Stop the dispatcher. It will return the on the next iteration, regardless if there is any work left.
          */
 		void stop() noexcept {
-			std::unique_lock lck{mtx};
-			done = true;
-			cv.notify_all();
+			std::unique_lock lck{m_mtx};
+			m_done = true;
+			m_cv.notify_all();
 		}
 
 		/**
@@ -39,16 +43,16 @@ namespace asyncpp {
          */
 		void run() {
 			dispatcher* const old_dispatcher = dispatcher::current(this);
-			while (!done) {
-				std::unique_lock lck{mtx};
-				if (queue.empty()) {
-					cv.wait_for(lck, std::chrono::milliseconds(500));
+			while (!m_done) {
+				std::unique_lock lck{m_mtx};
+				if (m_queue.empty()) {
+					m_cv.wait(lck);
 					continue;
 				}
-				auto cb = std::move(queue.front());
-				queue.pop_front();
+				auto cbfn = std::move(m_queue.front());
+				m_queue.pop_front();
 				lck.unlock();
-				if (cb) cb();
+				if (cbfn) cbfn();
 			}
 			dispatcher::current(old_dispatcher);
 		}

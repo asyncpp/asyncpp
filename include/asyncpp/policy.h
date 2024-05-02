@@ -1,6 +1,7 @@
 #pragma once
 #include <exception>
 #include <functional>
+#include <utility>
 
 namespace asyncpp {
 	/**
@@ -21,7 +22,7 @@ namespace asyncpp {
 		/// \brief Noop that ignores the thrown exception. The coroutine ends at the throw point and the stack frame is destroyed.
 		static const exception_policy ignore;
 		/// \brief Call the specified method on exception. The callback is called within the catch block.
-		static exception_policy handle(std::function<void()> fn) { return exception_policy{fn}; }
+		static exception_policy handle(std::function<void()> cbfn) { return exception_policy{std::move(cbfn)}; }
 	};
 	inline const exception_policy exception_policy::terminate = {[]() { std::terminate(); }};
 	inline const exception_policy exception_policy::ignore = {};
