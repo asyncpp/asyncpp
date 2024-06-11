@@ -272,3 +272,21 @@ Async++ provides an implementation of the `stop_token` header in order to suppor
 
 ## `timer`
 `timer` implements a simple timer thread that allows scheduling a callback at a specified time. It also enables a coroutine to wait in asynchronously and supports cancellation of callbacks/coroutine waits. It also implements the `dispatcher` interface.
+
+## Compatibility with shared objects / dll
+`asyncpp` uses static thread_local objects in some places. Currently those are
+- `dispatcher` To provide the `dispatcher::current()` method
+- `fiber` To allow access to the current fiber from within that fiber.
+
+Because on most systems static inline variables can exist multiple times when
+shared libraries are used special care must be taken when this is the case.
+`asyncpp` provides a special preprocessor flag `ASYNCPP_SO_COMPAT` to help with this issue,
+When this flag is defined it turns all static inline variables into regular static variables
+that lack a definition, turning them into a unresolved symbol inside the shared object.
+You can provide this definition by defining a second macro `ASYNCPP_SO_COMPAT_IMPL` and including
+the relevant header files (currently only `dispatcher.h`). Make sure you only do this in a single file
+inside the host application or you might get multiple definition errors.
+In addition to defining the macros above manually theres is also a cmake option `ASYNCPP_SO_COMPAT`, which
+when enabled, defines `ASYNCPP_SO_COMPAT` in all targets that link to asyncpp.
+As always when using C++ constructs in multiple shared libraries special care must be take that all of them use
+compatible (ideally identical) versions of asyncpp.

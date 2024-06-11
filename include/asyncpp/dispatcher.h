@@ -6,7 +6,11 @@ namespace asyncpp {
      * \brief Basic dispatcher interface class
      */
 	class dispatcher {
+#if defined(ASYNCPP_SO_COMPAT)
+		static thread_local dispatcher* g_current_dispatcher;
+#else
 		static thread_local inline dispatcher* g_current_dispatcher = nullptr;
+#endif
 
 	protected:
 		~dispatcher() = default;
@@ -43,4 +47,8 @@ namespace asyncpp {
          */
 		static dispatcher* current() noexcept { return g_current_dispatcher; }
 	};
+
+#if defined(ASYNCPP_SO_COMPAT_IMPL)
+	thread_local dispatcher* dispatcher::g_current_dispatcher = nullptr;
+#endif
 } // namespace asyncpp
