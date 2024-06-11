@@ -7,12 +7,16 @@ option(ASYNCPP_BUILD_TEST "Enable test builds" ON)
 option(ASYNCPP_BUILD_DOCS "Enable test builds" OFF)
 option(ASYNCPP_WITH_ASAN "Enable asan for test builds" ON)
 option(ASYNCPP_WITH_TSAN "Enable tsan for test builds" OFF)
+option(ASYNCPP_SO_COMPAT "Enable shared object compatibility mode" OFF)
 
 add_library(asyncpp INTERFACE)
 target_link_libraries(asyncpp INTERFACE Threads::Threads)
 target_include_directories(asyncpp
                            INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_features(asyncpp INTERFACE cxx_std_20)
+if(ASYNCPP_SO_COMPAT)
+  target_compile_definitions(asyncpp INTERFACE ASYNCPP_SO_COMPAT)
+endif()
 
 # G++ below 11 needs a flag
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
