@@ -50,7 +50,7 @@ namespace asyncpp {
 	 */
 	class async_launch_scope {
 		std::atomic<size_t> m_count{0U};
-		std::atomic<void*> m_continuation{};
+		std::atomic<void*> m_continuation{nullptr};
 
 	public:
 		constexpr async_launch_scope() noexcept = default;
@@ -77,7 +77,7 @@ namespace asyncpp {
 						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
 					}
 				}};
-				co_await std::move(awaitable);
+				co_await awaitable;
 			}(this, std::forward<decltype(awaitable)>(awaitable), allocator);
 		}
 
@@ -103,7 +103,7 @@ namespace asyncpp {
 						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
 					}
 				}};
-				co_await std::apply(std::move(callable), std::move(args));
+				co_await std::apply(callable, std::move(args));
 			}(this, std::forward<Callable>(callable), std::move(args), allocator);
 		}
 
@@ -128,7 +128,7 @@ namespace asyncpp {
 						if (hdl != nullptr) coroutine_handle<>::from_address(hdl).resume();
 					}
 				}};
-				co_await callable(std::forward<Args>(args)...);
+				co_await std::invoke(callable, std::forward<Args>(args)...);
 			}(this, std::forward<Callable>(callable), std::forward<Args>(args)...);
 		}
 

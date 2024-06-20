@@ -705,7 +705,15 @@ namespace asyncpp::detail {
 #endif
 	};
 
+#if defined(ASYNCPP_SO_COMPAT)
+	extern thread_local fiber_handle_base* g_current_fiber;
+#else
 	inline static thread_local fiber_handle_base* g_current_fiber = nullptr;
+#endif
+
+#if defined(ASYNCPP_SO_COMPAT_IMPL)
+	thread_local fiber_handle_base* g_current_fiber = nullptr;
+#endif
 
 	struct fiber_destroy_requested_exception {};
 
