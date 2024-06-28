@@ -54,6 +54,7 @@ if(ASYNCPP_BUILD_TEST)
   add_executable(
     asyncpp-test
     ${CMAKE_CURRENT_SOURCE_DIR}/test/async_generator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/channel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/defer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/event.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/fiber.cpp
