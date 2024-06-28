@@ -95,7 +95,10 @@ namespace asyncpp {
 		 * of suspension.
 		 * \param dsp The dispatcher to resume on or nullptr to resume inside the write call.
 		 */
-		read_awaiter& resume_on(dispatcher* dsp) noexcept { m_dispatcher = dsp; return *this; }
+		read_awaiter& resume_on(dispatcher* dsp) noexcept {
+			m_dispatcher = dsp;
+			return *this;
+		}
 
 		[[nodiscard]] constexpr bool await_ready() const noexcept;
 		bool await_suspend(coroutine_handle<> hndl);
@@ -120,7 +123,10 @@ namespace asyncpp {
 		 * of suspension.
 		 * \param dsp The dispatcher to resume on or nullptr to resume inside the read call.
 		 */
-		write_awaiter& resume_on(dispatcher* dsp) noexcept { m_dispatcher = dsp; return *this; }
+		write_awaiter& resume_on(dispatcher* dsp) noexcept {
+			m_dispatcher = dsp;
+			return *this;
+		}
 
 		[[nodiscard]] constexpr bool await_ready() const noexcept;
 		bool await_suspend(coroutine_handle<> hndl);

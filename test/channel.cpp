@@ -145,7 +145,7 @@ TEST(ASYNCPP, ChannelCloseRead) {
 	chan.close();
 	ASSERT_TRUE(!read_value.has_value());
 	ASSERT_TRUE(read_did_finish);
-	
+
 	write_did_finish = false;
 	[]() -> eager_fire_and_forget_task<> {
 		co_await chan.write(42);
@@ -216,8 +216,6 @@ TEST(ASYNCPP, ChannelIsClosed) {
 
 TEST(ASYNCPP, ChannelResumeOn) {
 	static channel<int> chan;
-	[]() -> eager_fire_and_forget_task<> {
-		co_await chan.read().resume_on(nullptr);
-	}();
+	[]() -> eager_fire_and_forget_task<> { co_await chan.read().resume_on(nullptr); }();
 	ASSERT_TRUE(chan.try_write(42));
 }
