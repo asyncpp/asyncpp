@@ -8,8 +8,6 @@
 #include <mutex>
 #include <optional>
 
-#include <cstdio>
-
 namespace asyncpp {
 
 	/**
@@ -130,7 +128,7 @@ namespace asyncpp {
 	};
 
 	template<typename T>
-	inline channel<T>::read_awaiter channel<T>::read() {
+	inline typename channel<T>::read_awaiter channel<T>::read() {
 		return read_awaiter{this};
 	}
 
@@ -157,8 +155,8 @@ namespace asyncpp {
 	}
 
 	template<typename T>
-	inline channel<T>::write_awaiter channel<T>::write(T value) {
-		return write_awaiter(this, std::move(value));
+	inline typename channel<T>::write_awaiter channel<T>::write(T value) {
+		return write_awaiter{this, std::move(value)};
 	}
 
 	template<typename T>
