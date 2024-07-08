@@ -127,7 +127,7 @@ namespace asyncpp {
 	template<typename T1, typename... TExtra>
 	constexpr size_t min_alignof() noexcept {
 		if constexpr (sizeof...(TExtra) > 0)
-			return std::min(alignof(T1), min_alignof<TExtra...>());
+			return (std::min)(alignof(T1), min_alignof<TExtra...>());
 		else
 			return alignof(T1);
 	}
