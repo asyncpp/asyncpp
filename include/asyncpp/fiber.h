@@ -151,7 +151,7 @@ namespace asyncpp::detail {
 		};
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 10);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
-		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
+		memset(sp, 0, reinterpret_cast<uintptr_t>(stack.stack) - reinterpret_cast<uintptr_t>(sp));
 		auto frame = reinterpret_cast<stack_frame*>(sp);
 		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
@@ -215,7 +215,7 @@ namespace asyncpp::detail {
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 11);
 #endif
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
-		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
+		memset(sp, 0, reinterpret_cast<uintptr_t>(stack.stack) - reinterpret_cast<uintptr_t>(sp));
 		auto frame = reinterpret_cast<stack_frame*>(sp);
 		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
@@ -237,7 +237,7 @@ namespace asyncpp::detail {
 		};
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 22);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
-		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
+		memset(sp, 0, reinterpret_cast<uintptr_t>(stack.stack) - reinterpret_cast<uintptr_t>(sp));
 		auto frame = reinterpret_cast<stack_frame*>(sp);
 		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
@@ -258,7 +258,7 @@ namespace asyncpp::detail {
 		};
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 18);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
-		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
+		memset(sp, 0, reinterpret_cast<uintptr_t>(stack.stack) - reinterpret_cast<uintptr_t>(sp));
 		auto frame = reinterpret_cast<stack_frame*>(sp);
 		frame->ret_addr = reinterpret_cast<uintptr_t>(entry_fn);
 		frame->param = reinterpret_cast<uintptr_t>(arg);
@@ -279,7 +279,7 @@ namespace asyncpp::detail {
 		};
 		static_assert(sizeof(stack_frame) == sizeof(uintptr_t) * 42);
 		sp -= sizeof(stack_frame) / sizeof(uintptr_t);
-		memset(sp, 0, reinterpret_cast<uintptr_t>(top_of_stack) - reinterpret_cast<uintptr_t>(sp));
+		memset(sp, 0, reinterpret_cast<uintptr_t>(stack.stack) - reinterpret_cast<uintptr_t>(sp));
 		auto frame = reinterpret_cast<stack_frame*>(sp);
 		// Note: On PPC a function has two entry points for local and global entry respectively
 		// 		 Since we get the global entry point we also need to set the r12 register to the

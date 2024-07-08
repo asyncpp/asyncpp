@@ -333,9 +333,9 @@ namespace asyncpp {
 				}
 				now = std::chrono::steady_clock::now();
 				std::chrono::nanoseconds timeout{500 * 1000 * 1000};
-				if (!m_scheduled_set.empty()) timeout = std::min(m_scheduled_set.begin()->timepoint - now, timeout);
+				if (!m_scheduled_set.empty()) timeout = (std::min)(m_scheduled_set.begin()->timepoint - now, timeout);
 				if (!m_scheduled_cancellable_set.empty())
-					timeout = std::min(m_scheduled_cancellable_set.begin()->timepoint - now, timeout);
+					timeout = (std::min)(m_scheduled_cancellable_set.begin()->timepoint - now, timeout);
 				if (m_pushed.empty() && timeout.count() > 0) {
 					if (m_exit) break;
 					m_cv.wait_for(lck, timeout);
