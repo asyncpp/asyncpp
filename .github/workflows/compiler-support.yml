@@ -43,11 +43,6 @@ jobs:
       ubuntu-2004_gcc-10: ${{ steps.status.outputs.ubuntu-2004_gcc-10 }}
       windows-2022_msvc17: ${{ steps.status.outputs.windows-2022_msvc17 }}
       windows-2019_msvc16: ${{ steps.status.outputs.windows-2019_msvc16 }}
-      macos-11_gcc-10: ${{ steps.status.outputs.macos-11_gcc-10 }}
-      macos-11_gcc-11: ${{ steps.status.outputs.macos-11_gcc-11 }}
-      macos-11_clang-13: ${{ steps.status.outputs.macos-11_clang-13 }}
-      macos-11_clang-14: ${{ steps.status.outputs.macos-11_clang-14 }}
-      macos-11_clang-15: ${{ steps.status.outputs.macos-11_clang-15 }}
       macos-12_gcc-11: ${{ steps.status.outputs.macos-12_gcc-11 }}
       macos-12_clang-15: ${{ steps.status.outputs.macos-12_clang-15 }}
     defaults:
