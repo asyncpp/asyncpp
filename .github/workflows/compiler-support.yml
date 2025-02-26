@@ -32,6 +32,10 @@ jobs:
 #         G++11 Seems to be broken on MacOS 12 and fails with a assert inside the linker, so keep it disabled for now.
 #         - { tag: "macos-12_gcc-11", name: "MacOS 12 G++ 11", cxx: "g++-11", cc: "gcc-11", runs-on: "macos-12" }
           - { tag: "macos-13_clang-15", name: "MacOS 13 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-13" }
+          - { tag: "macos-14_clang-15", name: "MacOS 14 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-14-large" }
+          - { tag: "macos-14-arm_clang-15", name: "MacOS 14 (Arm64) Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-14" }
+          - { tag: "macos-15_clang-18", name: "MacOS 15 Clang 18", cxx: "/usr/local/Cellar/llvm@18//18.1.8/bin/clang++", cc: "/usr/local/Cellar/llvm@18//18.1.8/bin/clang", runs-on: "macos-15-large" }
+          - { tag: "macos-15-arm_clang-18", name: "MacOS 15 (Arm64) Clang 18", cxx: "/usr/local/Cellar/llvm@18//18.1.8/bin/clang++", cc: "/usr/local/Cellar/llvm@18//18.1.8/bin/clang", runs-on: "macos-15" }
     runs-on: ${{ matrix.compiler.runs-on }}
     name: Compiler ${{ matrix.compiler.name }}
     env:
