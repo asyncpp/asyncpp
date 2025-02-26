@@ -11,35 +11,38 @@ without sacrificing performance. While it is primarily tested and developed on m
 patches and improvements for other platforms are welcome.
 
 Tested and supported compilers:
-| Linux                                                                 | Windows                                                             | MacOS (best effort)                                                 |
-|-----------------------------------------------------------------------|---------------------------------------------------------------------|---------------------------------------------------------------------|
-| [![ubuntu-2004_clang-10][img_ubuntu-2004_clang-10]][Compiler-Support] | [![windows-2019_msvc16][img_windows-2019_msvc16]][Compiler-Support] | [![macos-12_clang-15][img_macos-12_clang-15]][Compiler-Support]     |
-| [![ubuntu-2004_clang-11][img_ubuntu-2004_clang-11]][Compiler-Support] | [![windows-2022_msvc17][img_windows-2022_msvc17]][Compiler-Support] |                                                                     |
-| [![ubuntu-2004_clang-12][img_ubuntu-2004_clang-12]][Compiler-Support] |                                                                     |                                                                     |
-| [![ubuntu-2004_gcc-10][img_ubuntu-2004_gcc-10]][Compiler-Support]     |                                                                     |                                                                     |
-| [![ubuntu-2204_clang-13][img_ubuntu-2204_clang-13]][Compiler-Support] |                                                                     |                                                                     |
-| [![ubuntu-2204_clang-14][img_ubuntu-2204_clang-14]][Compiler-Support] |                                                                     |                                                                     |
-| [![ubuntu-2204_clang-15][img_ubuntu-2204_clang-15]][Compiler-Support] |                                                                     |                                                                     |
-| [![ubuntu-2204_gcc-11][img_ubuntu-2204_gcc-11]][Compiler-Support]     |                                                                     |                                                                     |
-| [![ubuntu-2204_gcc-10][img_ubuntu-2204_gcc-10]][Compiler-Support]     |                                                                     |                                                                     |
+| Linux                                                                 | Windows                                                             | MacOS (best effort)                                                      |
+|-----------------------------------------------------------------------|---------------------------------------------------------------------|--------------------------------------------------------------------------|
+| [![ubuntu-2404_clang-16][img_ubuntu-2404_clang-16]][Compiler-Support] | [![windows-2025_msvc17][img_windows-2025_msvc17]][Compiler-Support] | [![macos-15-arm_clang-18][img_macos-15-arm_clang-18]][Compiler-Support]  |
+| [![ubuntu-2404_clang-17][img_ubuntu-2404_clang-17]][Compiler-Support] | [![windows-2022_msvc17][img_windows-2022_msvc17]][Compiler-Support] | [![macos-14-arm_clang-15][img_macos-14-arm_clang-15]][Compiler-Support]  |
+| [![ubuntu-2404_clang-18][img_ubuntu-2404_clang-18]][Compiler-Support] | [![windows-2019_msvc16][img_windows-2019_msvc16]][Compiler-Support] | [![macos-13_clang-15][img_macos-13_clang-15]][Compiler-Support]          |                                                                     |
+| [![ubuntu-2404_gcc-12][img_ubuntu-2404_gcc-12]][Compiler-Support]     |                                                                     |                                                                          |
+| [![ubuntu-2404_gcc-13][img_ubuntu-2404_gcc-13]][Compiler-Support]     |                                                                     |                                                                          |
+| [![ubuntu-2404_gcc-14][img_ubuntu-2404_gcc-14]][Compiler-Support]     |                                                                     |                                                                          |
+| [![ubuntu-2204_clang-13][img_ubuntu-2204_clang-13]][Compiler-Support] |                                                                     |                                                                          |
+| [![ubuntu-2204_clang-14][img_ubuntu-2204_clang-14]][Compiler-Support] |                                                                     |                                                                          |
+| [![ubuntu-2204_clang-15][img_ubuntu-2204_clang-15]][Compiler-Support] |                                                                     |                                                                          |
+| [![ubuntu-2204_gcc-11][img_ubuntu-2204_gcc-11]][Compiler-Support]     |                                                                     |
+| [![ubuntu-2204_gcc-10][img_ubuntu-2204_gcc-10]][Compiler-Support]     |                                                                     |
 
 
-[img_ubuntu-2004_clang-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_clang-10/shields.json
-[img_ubuntu-2004_clang-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_clang-11/shields.json
-[img_ubuntu-2004_clang-12]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_clang-12/shields.json
-[img_ubuntu-2004_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2004_gcc-10/shields.json
+[img_ubuntu-2404_clang-16]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2404_clang-16/shields.json
+[img_ubuntu-2404_clang-17]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2404_clang-17/shields.json
+[img_ubuntu-2404_clang-18]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2404_clang-18/shields.json
+[img_ubuntu-2404_gcc-12]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2404_gcc-12/shields.json
+[img_ubuntu-2404_gcc-13]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2404_gcc-13/shields.json
+[img_ubuntu-2404_gcc-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2404_gcc-14/shields.json
 [img_ubuntu-2204_clang-13]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_clang-13/shields.json
 [img_ubuntu-2204_clang-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_clang-14/shields.json
 [img_ubuntu-2204_clang-15]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_clang-15/shields.json
-[img_ubuntu-2204_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_gcc-10/shields.json
 [img_ubuntu-2204_gcc-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_gcc-11/shields.json
-[img_windows-2019_msvc16]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/windows-2019_msvc16/shields.json
+[img_ubuntu-2204_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/ubuntu-2204_gcc-10/shields.json
+[img_windows-2025_msvc17]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/windows-2025_msvc17/shields.json
 [img_windows-2022_msvc17]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/windows-2022_msvc17/shields.json
-[img_macos-11_clang-14]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_clang-14/shields.json
-[img_macos-11_clang-15]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_clang-15/shields.json
-[img_macos-11_gcc-10]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_gcc-10/shields.json
-[img_macos-11_gcc-11]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-11_gcc-11/shields.json
-[img_macos-12_clang-15]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-12_clang-15/shields.json
+[img_windows-2019_msvc16]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/windows-2019_msvc16/shields.json
+[img_macos-15-arm_clang-18]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-15-arm_clang-18/shields.json
+[img_macos-14-arm_clang-15]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-14-arm_clang-15/shields.json
+[img_macos-13_clang-15]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/asyncpp/asyncpp/badges/compiler/macos-13_clang-15/shields.json
 [Compiler-Support]: https://github.com/asyncpp/asyncpp/actions/workflows/compiler-support.yml
 
 This library also supports Windows 10 / MSVC; the clang-cl support is, however, still a [WIP](https://github.com/llvm/llvm-project/issues/56300).
