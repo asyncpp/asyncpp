@@ -30,7 +30,7 @@ TEST(ASYNCPP, TimerWait) {
 	auto status = f.wait_for(std::chrono::seconds(1));
 	ASSERT_EQ(status, std::future_status::ready);
 	ASSERT_NE(f.get(), std::this_thread::get_id());
-	ASSERT_LE(std::chrono::milliseconds{100}, (std::chrono::steady_clock::now() - start));
+	ASSERT_LE(std::chrono::milliseconds{40}, (std::chrono::steady_clock::now() - start));
 }
 
 TEST(ASYNCPP, TimerWaitChrono) {
@@ -42,7 +42,7 @@ TEST(ASYNCPP, TimerWaitChrono) {
 	auto status = f.wait_for(std::chrono::seconds(1));
 	ASSERT_EQ(status, std::future_status::ready);
 	ASSERT_NE(f.get(), std::this_thread::get_id());
-	ASSERT_LE(std::chrono::milliseconds{100}, (std::chrono::steady_clock::now() - start));
+	ASSERT_LE(std::chrono::milliseconds{40}, (std::chrono::steady_clock::now() - start));
 }
 
 TEST(ASYNCPP, TimerDestroyCancel) {
@@ -53,7 +53,7 @@ TEST(ASYNCPP, TimerDestroyCancel) {
 	t.reset();
 	ASSERT_EQ(f.wait_for(std::chrono::seconds(5)), std::future_status::ready);
 	ASSERT_EQ(f.get(), false);
-	ASSERT_GE(std::chrono::milliseconds{100}, (std::chrono::steady_clock::now() - start));
+	ASSERT_GE(std::chrono::milliseconds{75}, (std::chrono::steady_clock::now() - start));
 }
 
 TEST(ASYNCPP, TimerCancelDestroy) {
@@ -67,5 +67,5 @@ TEST(ASYNCPP, TimerCancelDestroy) {
 	source.request_stop();
 	ASSERT_EQ(f.wait_for(std::chrono::seconds(5)), std::future_status::ready);
 	ASSERT_EQ(f.get(), false);
-	ASSERT_GE(std::chrono::milliseconds{100}, (std::chrono::steady_clock::now() - start));
+	ASSERT_GE(std::chrono::milliseconds{75}, (std::chrono::steady_clock::now() - start));
 }
