@@ -238,11 +238,20 @@ namespace asyncpp {
 	class atomic_ref {
 		friend struct std::hash<asyncpp::atomic_ref<T>>;
 		template<RefCountable T2>
-		friend constexpr auto operator<=>(const atomic_ref<T2>& lhs, const atomic_ref<T2>& rhs) noexcept;
+		friend constexpr auto operator<=>(const atomic_ref<T2>& lhs, const atomic_ref<T2>& rhs) noexcept {
+			return (lhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T2>::lock_mask) <=>
+				   (rhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T2>::lock_mask);
+		}
 		template<RefCountable T2>
-		friend constexpr auto operator<=>(const atomic_ref<T2>& lhs, const T2* rhs) noexcept;
+		friend constexpr auto operator<=>(const atomic_ref<T2>& lhs, const T2* rhs) noexcept {
+			return (lhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T>::lock_mask) <=>
+				   reinterpret_cast<uintptr_t>(rhs);
+		}
 		template<RefCountable T2>
-		friend constexpr auto operator<=>(const T2* lhs, const atomic_ref<T2>& rhs) noexcept;
+		friend constexpr auto operator<=>(const T2* lhs, const atomic_ref<T2>& rhs) noexcept {
+			return reinterpret_cast<uintptr_t>(lhs) <=>
+				   (rhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T>::lock_mask);
+		}
 		mutable std::atomic<uintptr_t> m_ptr;
 
 		static constexpr uintptr_t lock_mask = uintptr_t{1} << (sizeof(uintptr_t) * 8 - 1);
@@ -429,22 +438,6 @@ namespace asyncpp {
 	template<typename T>
 	inline constexpr auto operator!=(const T* lhs, const ref<T>& rhs) noexcept {
 		return (lhs <=> rhs) != std::strong_ordering::equal;
-	}
-
-	template<RefCountable T>
-	inline constexpr auto operator<=>(const atomic_ref<T>& lhs, const atomic_ref<T>& rhs) noexcept {
-		return (lhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T>::lock_mask) <=>
-			   (rhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T>::lock_mask);
-	}
-	template<RefCountable T>
-	inline constexpr auto operator<=>(const atomic_ref<T>& lhs, const T* rhs) noexcept {
-		return (lhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T>::lock_mask) <=>
-			   reinterpret_cast<uintptr_t>(rhs);
-	}
-	template<RefCountable T>
-	inline constexpr auto operator<=>(const T* lhs, const atomic_ref<T>& rhs) noexcept {
-		return reinterpret_cast<uintptr_t>(lhs) <=>
-			   (rhs.m_ptr.load(std::memory_order::relaxed) & ~atomic_ref<T>::lock_mask);
 	}
 
 	template<typename T>
