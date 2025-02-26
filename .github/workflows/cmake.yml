@@ -14,8 +14,8 @@ on:
       - ".github/workflows/cmake.yml"
 
 env:
-  CXX: /usr/bin/clang++-18
-  CC: /usr/bin/clang-18
+  CXX: /usr/bin/clang++-16
+  CC: /usr/bin/clang-16
   CMAKE_URL: https://cmake.org/files/v3.15/cmake-3.15.7.tar.gz
   CMAKE_VERSION: 3.15.7
 
