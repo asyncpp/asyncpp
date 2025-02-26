@@ -23,7 +23,7 @@ jobs:
           linter_name: clang-format
 
   cmake-format:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/setup-python@v4.3.0
         with:
@@ -38,7 +38,7 @@ jobs:
           linter_name: cmake-format
 
   line-ending:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - run: git add --renormalize .

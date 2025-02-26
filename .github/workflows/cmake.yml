@@ -14,34 +14,21 @@ on:
       - ".github/workflows/cmake.yml"
 
 env:
-  CXX: /usr/bin/clang++-12
-  CC: /usr/bin/clang-12
-  CMAKE_URL: https://cmake.org/files/v3.15/cmake-3.15.7.tar.gz
+  CXX: /usr/bin/clang++-18
+  CC: /usr/bin/clang-18
+  CMAKE_URL: https://cmake.org/files/v3.15/cmake-3.15.7-Linux-x86_64.sh
   CMAKE_VERSION: 3.15.7
 
 jobs:
   min-req:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
-      - name: Cache CMake
-        id: cache-cmake
-        uses: actions/cache@v3
-        with:
-          path: cmake-${{ env.CMAKE_VERSION }}
-          key: ubuntu-20.04-${{ github.job }}-cmake-${{ env.CMAKE_VERSION }}
-      - name: Build cmake
-        if: steps.cache-cmake.outputs.cache-hit != 'true'
-        run: |
-          wget ${{ env.CMAKE_URL }}
-          tar -zxf cmake-${{ env.CMAKE_VERSION }}.tar.gz
-          cd cmake-${{ env.CMAKE_VERSION }}
-          ./bootstrap
-          make -j $(nproc)
       - name: Install cmake
         run: |
-          cd cmake-${{ env.CMAKE_VERSION }}
-          sudo make install
+          wget ${{ env.CMAKE_URL }}
+          chmod +x cmake-${{ env.CMAKE_VERSION }}-Linux-x86_64.sh
+          ./cmake-${{ env.CMAKE_VERSION }}-Linux-x86_64.sh --skip-license
       - name: Build Tests
         run: |
           mkdir build
