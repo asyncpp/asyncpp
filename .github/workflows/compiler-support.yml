@@ -80,11 +80,11 @@ jobs:
       - name: Test
         working-directory: ${{ github.workspace }}/build
         if: contains(matrix.compiler.runs-on, 'windows') != true
-        run: ./asyncpp-test
+        run: ./test/asyncpp-test
       - name: Test
         if: contains(matrix.compiler.runs-on, 'windows')
         working-directory: ${{ github.workspace }}/build
-        run: Debug/asyncpp-test.exe
+        run: Debug/test/asyncpp-test.exe
       - name: Update Result
         id: status
         if: ${{ always() }}
