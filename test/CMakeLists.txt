@@ -51,23 +51,22 @@ add_executable(
   ${CMAKE_CURRENT_SOURCE_DIR}/thread_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/timer.cpp)
 
-if (NOT ASYNCPP_BUILD_TEST)
+if(NOT ASYNCPP_BUILD_TEST)
   find_package(asyncpp CONFIG REQUIRED)
   target_link_libraries(asyncpp-test PRIVATE asyncpp::asyncpp)
 else()
   target_link_libraries(asyncpp-test PRIVATE asyncpp)
 endif()
 
-target_link_libraries(asyncpp-test PRIVATE GTest::gtest GTest::gtest_main Threads::Threads)
+target_link_libraries(asyncpp-test PRIVATE GTest::gtest GTest::gtest_main
+                                           Threads::Threads)
 
 if(ASYNCPP_WITH_ASAN)
   message(STATUS "Building with asan enabled")
   if(MSVC)
     target_compile_options(asyncpp-test PRIVATE -fsanitize=address /Zi)
-    target_compile_definitions(asyncpp-test
-                               PRIVATE _DISABLE_VECTOR_ANNOTATION)
-    target_compile_definitions(asyncpp-test
-                               PRIVATE _DISABLE_STRING_ANNOTATION)
+    target_compile_definitions(asyncpp-test PRIVATE _DISABLE_VECTOR_ANNOTATION)
+    target_compile_definitions(asyncpp-test PRIVATE _DISABLE_STRING_ANNOTATION)
     target_link_libraries(asyncpp-test PRIVATE libsancov.lib)
   else()
     target_compile_options(asyncpp-test PRIVATE -fsanitize=address)
@@ -79,10 +78,8 @@ if(ASYNCPP_WITH_TSAN)
   message(STATUS "Building with tsan enabled")
   if(MSVC)
     target_compile_options(asyncpp-test PRIVATE -fsanitize=thread /Zi)
-    target_compile_definitions(asyncpp-test
-                               PRIVATE _DISABLE_VECTOR_ANNOTATION)
-    target_compile_definitions(asyncpp-test
-                               PRIVATE _DISABLE_STRING_ANNOTATION)
+    target_compile_definitions(asyncpp-test PRIVATE _DISABLE_VECTOR_ANNOTATION)
+    target_compile_definitions(asyncpp-test PRIVATE _DISABLE_STRING_ANNOTATION)
     target_link_libraries(asyncpp-test PRIVATE libsancov.lib)
   else()
     target_compile_options(asyncpp-test PRIVATE -fsanitize=thread)
