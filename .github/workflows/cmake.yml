@@ -33,7 +33,7 @@ jobs:
         run: |
           cmake -S . -B build -D ASYNCPP_BUILD_TEST=OFF
           cmake --build build
-          ctest --install build --prefix install
+          cmake --install build --prefix install
       - name: Run Tests 
         run: |
           cmake -S test -B test_build -D CMAKE_PREFIX_PATH=../install
