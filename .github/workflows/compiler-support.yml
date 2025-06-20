@@ -78,7 +78,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build/test --output-on-failure --no-tests=error
       - name: Update Result
         id: status
         if: ${{ always() }}
