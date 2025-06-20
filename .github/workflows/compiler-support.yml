@@ -78,13 +78,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Debug
       - name: Test
-        working-directory: ${{ github.workspace }}/build
-        if: contains(matrix.compiler.runs-on, 'windows') != true
-        run: ./asyncpp-test
-      - name: Test
-        if: contains(matrix.compiler.runs-on, 'windows')
-        working-directory: ${{ github.workspace }}/build
-        run: Debug/asyncpp-test.exe
+        run: ctest --test-dir build --output-on-failure
       - name: Update Result
         id: status
         if: ${{ always() }}
