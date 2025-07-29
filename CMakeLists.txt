@@ -8,7 +8,7 @@ include(CMakePackageConfigHelpers)
 find_package(Threads REQUIRED)
 
 option(ASYNCPP_BUILD_TEST "Enable test builds" ON)
-option(ASYNCPP_BUILD_DOCS "Enable test builds" OFF)
+option(ASYNCPP_BUILD_DOCS "Enable documentation builds" OFF)
 option(ASYNCPP_SO_COMPAT "Enable shared object compatibility mode" OFF)
 
 add_library(asyncpp INTERFACE)
