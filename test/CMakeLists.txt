@@ -59,7 +59,7 @@ else()
 endif()
 
 target_link_libraries(asyncpp-test PUBLIC GTest::gtest GTest::gtest_main
-                                           Threads::Threads)
+                                          Threads::Threads)
 
 if(ASYNCPP_WITH_ASAN)
   message(STATUS "Building with asan enabled")
