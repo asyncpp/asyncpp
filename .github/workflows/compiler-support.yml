@@ -24,7 +24,6 @@ jobs:
           - { tag: "ubuntu-2204_gcc-11", name: "Ubuntu 22.04 G++ 11", cxx: "/usr/bin/g++-11", cc: "/usr/bin/gcc-11", runs-on: "ubuntu-22.04" }
           - { tag: "windows-2025_msvc17", name: "Windows Server 2025 MSVC 17", cxx: "", cc: "", runs-on: "windows-2025" }
           - { tag: "windows-2022_msvc17", name: "Windows Server 2022 MSVC 17", cxx: "", cc: "", runs-on: "windows-2022" }
-          - { tag: "windows-2019_msvc16", name: "Windows Server 2019 MSVC 16", cxx: "", cc: "", runs-on: "windows-2019" }
           - { tag: "macos-13_clang-15", name: "MacOS 13 Clang 15", cxx: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang++", cc: "/usr/local/Cellar/llvm@15//15.0.7/bin/clang", runs-on: "macos-13" }
           - { tag: "macos-14-arm_clang-15", name: "MacOS 14 (Arm64) Clang 15", cxx: "/opt/homebrew/opt/llvm@15/bin/clang++", cc: "/opt/homebrew/opt/llvm@15/bin/clang", runs-on: "macos-14" }
           - { tag: "macos-15-arm_clang-18", name: "MacOS 15 (Arm64) Clang 18", cxx: "/opt/homebrew/opt/llvm@18/bin/clang++", cc: "/opt/homebrew/opt/llvm@18/bin/clang", runs-on: "macos-15" }
@@ -51,7 +50,6 @@ jobs:
       ubuntu-2204_gcc-11: ${{ steps.status.outputs.ubuntu-2204_gcc-11 }}
       windows-2025_msvc17: ${{ steps.status.outputs.windows-2025_msvc17 }}
       windows-2022_msvc17: ${{ steps.status.outputs.windows-2022_msvc17 }}
-      windows-2019_msvc16: ${{ steps.status.outputs.windows-2019_msvc16 }}
       macos-13_clang-15: ${{ steps.status.outputs.macos-13_clang-15 }}
       macos-14-arm_clang-15: ${{ steps.status.outputs.macos-14-arm_clang-15 }}
       macos-15-arm_clang-18: ${{ steps.status.outputs.macos-15-arm_clang-18 }}
