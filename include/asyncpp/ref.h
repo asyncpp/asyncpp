@@ -161,8 +161,8 @@ namespace asyncpp {
 		/// \brief Move constructor
 		constexpr ref(ref&& other) noexcept : m_ptr{std::exchange(other.m_ptr, nullptr)} {}
 		/// \brief Assignment operator
-		ref& operator=(const ref& other) noexcept(
-			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		ref& operator=(const ref& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>())) &&
+												  noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			if (&other != this) reset(other.m_ptr);
 			return *this;
 		}
@@ -178,8 +178,8 @@ namespace asyncpp {
 		 * \param ptr The new pointer
 		 * \param adopt_ref the reference count is already incremented, keep it as is
 		 */
-		void reset(T* ptr) noexcept(
-			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		void reset(T* ptr) noexcept(noexcept(refcounted_add_ref(std::declval<T*>())) &&
+									noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			if (m_ptr) refcounted_remove_ref(m_ptr);
 			m_ptr = ptr;
 			if (m_ptr) refcounted_add_ref(m_ptr);
@@ -327,8 +327,9 @@ namespace asyncpp {
 			return *this;
 		}
 		/** \brief Assignment operator */
-		atomic_ref& operator=(const atomic_ref<T>& other) noexcept(
-			noexcept(refcounted_add_ref(std::declval<T*>())) && noexcept(refcounted_remove_ref(std::declval<T*>()))) {
+		atomic_ref&
+		operator=(const atomic_ref<T>& other) noexcept(noexcept(refcounted_add_ref(std::declval<T*>())) &&
+													   noexcept(refcounted_remove_ref(std::declval<T*>()))) {
 			if (&other != this) exchange(other.load());
 			return *this;
 		}
