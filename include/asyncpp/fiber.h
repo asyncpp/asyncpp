@@ -47,7 +47,7 @@ namespace asyncpp::detail {
 		// Round the stacksize to the next multiple of pages
 		const auto page_count = (size + pagesize - 1) / pagesize;
 		size = page_count * pagesize;
-		const auto alloc_size = size + pagesize * 2;
+		const auto alloc_size = size + (pagesize * 2);
 #if defined(MAP_STACK)
 		void* const stack =
 			::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
@@ -704,6 +704,9 @@ namespace asyncpp::detail {
 		unsigned valgrind_id = 0;
 #endif
 	};
+	static_assert(std::is_standard_layout_v<fiber_handle_base>);
+	static_assert(offsetof(fiber_handle_base, resume_cb) == 0);
+	static_assert(offsetof(fiber_handle_base, destroy_cb) == sizeof(decltype(fiber_handle_base::resume_cb)));
 
 #if defined(ASYNCPP_SO_COMPAT)
 	extern thread_local fiber_handle_base* g_current_fiber;
@@ -723,9 +726,11 @@ namespace asyncpp::detail {
 			FN function;
 			explicit handle(FN&& cbfn) : function(std::forward<FN>(cbfn)) {}
 		};
-		static_assert(offsetof(handle, resume_cb) == 0);
 
 		auto hndl = new handle(std::forward<FN>(cbfn));
+		// This should be a compile time check, but C++ doesn't allow offsetof on
+		// non standard-layout classes and the lambda might turn the handle into one
+		assert(static_cast<void*>(hndl) == static_cast<void*>(&hndl->resume_cb));
 		hndl->resume_cb = [](fiber_handle_base* hndl) {
 			auto old = std::exchange(g_current_fiber, hndl);
 			while (hndl->resume_cb != nullptr) {
@@ -819,7 +824,7 @@ namespace asyncpp::detail {
 			VALGRIND_STACK_REGISTER(hndl->fiber_stack.mmap_base,
 									static_cast<uint8_t*>(hndl->fiber_stack.mmap_base) + hndl->fiber_stack.mmap_size);
 #endif
-		return coroutine_handle<>::from_address(static_cast<void*>(hndl));
+		return coroutine_handle<>::from_address(static_cast<void*>(static_cast<fiber_handle_base*>(hndl)));
 	}
 
 	template<typename T>

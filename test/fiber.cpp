@@ -249,12 +249,12 @@ TEST(ASYNCPP, FiberFull) {
 	asyncpp::async_launch_scope scope;
 	scope.invoke([]() -> asyncpp::task<> {
 		fiber f([]() {
-			std::cout << "This is a stackful coroutine, yet I can still await C++20 coroutine awaiters:" << std::endl;
+			// This is a stackful coroutine, yet I can still await C++20 coroutine awaiters:
 			fib_await asyncpp::timer::get_default().wait(std::chrono::milliseconds(100));
-			std::cout << "This is printed after 100 milliseconds" << std::endl;
+			// This is exeuted after 100 milliseconds
 			return 10;
 		});
-		std::cout << "You can also await stackful coroutines inside a c++20 coroutine:" << std::endl;
+		// You can also await stackful coroutines inside a c++20 coroutine:
 		co_await f;
 	});
 	scope.join_future().get();
