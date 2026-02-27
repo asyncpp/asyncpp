@@ -51,7 +51,7 @@ namespace asyncpp {
 		/**
 		 * \brief Write to the channel.
 		 * \note This will suspend until a reader is available to receive the value or the channel is closed.
-		 * \return Awaiter for reading (resumes with true if the value was received and false if the channel was closed).
+		 * \return Awaiter for writing (resumes with true if the value was received and false if the channel was closed).
 		 */
 		[[nodiscard]] write_awaiter write(T value);
 		/**
