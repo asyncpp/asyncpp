@@ -1,6 +1,7 @@
 #pragma once
 #include <asyncpp/detail/std_import.h>
 #include <asyncpp/dispatcher.h>
+
 #include <atomic>
 #include <cassert>
 
@@ -444,6 +445,7 @@ namespace asyncpp {
      *      waiting coroutine can never resume. (This asserts in debug mode)
      */
 	class multi_consumer_auto_reset_event {
+	public:
 		/**
          * \brief Construct a new event
          * \param set_initially The initial state of the event (true => set, false => unset)
@@ -476,15 +478,23 @@ namespace asyncpp {
          * \return true if a coroutine has been waiting and was resumed
          */
 		bool set(dispatcher* resume_dispatcher = nullptr) noexcept {
-			auto state = m_state.exchange(this, std::memory_order::acq_rel);
-			if (state == this || state == nullptr) return false;
-			auto await = static_cast<awaiter*>(state);
+			// We assume the event is
+			awaiter* await = nullptr;
+			void* old_state = m_state.load(std::memory_order::acquire);
+			void* new_state;
+			do {
+				// If the state is already set we can just return
+				if (old_state == this) return false;
+				// Otherwise store the state as an awaiter
+				await = static_cast<awaiter*>(old_state);
+				// if the event had awaiters we update the state to "unset", if it was previously unset we transition to set
+				new_state = (old_state == nullptr) ? this : nullptr;
+			} while (!m_state.compare_exchange_weak(old_state, new_state, std::memory_order::release,
+													std::memory_order::acquire));
 
-			// Only modify the state if it has not been changed in between
-			state = this;
-			m_state.compare_exchange_strong(state, nullptr, std::memory_order::acq_rel);
-
-			while (await != nullptr) {
+			// Execute the awaiters (if any)
+			if (await == nullptr) return false;
+			do {
 				auto next = await->m_next;
 				assert(await->m_parent == this);
 				assert(await->m_handle);
@@ -496,7 +506,7 @@ namespace asyncpp {
 					await->m_handle.resume();
 				}
 				await = next;
-			}
+			} while (await != nullptr);
 			return true;
 		}
 
@@ -542,13 +552,30 @@ namespace asyncpp {
 		struct [[nodiscard]] awaiter {
 			explicit constexpr awaiter(multi_consumer_auto_reset_event* parent, dispatcher* dispatcher) noexcept
 				: m_parent(parent), m_dispatcher(dispatcher) {}
-			[[nodiscard]] bool await_ready() const noexcept { return m_parent->is_set(); }
+			[[nodiscard]] bool await_ready() const noexcept {
+				// We assume the event is set
+				void* old_state = m_parent;
+				// And try to replace it with unset
+				// NOTE: compare_exchange_weak can fail spuriously, but we don't care
+				//       because in that case we just enter the main loop in await_suspend
+				// Returns true if the value was updated (i.e. old_state equalled m_parent and cas succeeded)
+				return m_parent->m_state.compare_exchange_weak( //
+					old_state, nullptr, std::memory_order::release, std::memory_order::acquire);
+			}
 			[[nodiscard]] bool await_suspend(coroutine_handle<> hdl) noexcept {
 				m_handle = hdl;
 				void* old_state = m_parent->m_state.load(std::memory_order::acquire);
 				do {
-					// event became set
-					if (old_state == m_parent) return false;
+					// If the event is set, reset it and resume the coroutine
+					if (old_state == m_parent) {
+						if (m_parent->m_state.compare_exchange_weak( //
+								old_state, nullptr, std::memory_order::release, std::memory_order::acquire))
+							return false;
+						// the state changed between load and compare (either because another coroutine was faster or the event was reset).
+						// Retry from the start
+						continue;
+					}
+					// The event is unset, add the existing awaiter (if any) to the list and suspend the coroutine
 					m_next = static_cast<awaiter*>(old_state);
 				} while (!m_parent->m_state.compare_exchange_weak( //
 					old_state, this, std::memory_order::release, std::memory_order::acquire));
