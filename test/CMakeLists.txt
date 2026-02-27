@@ -43,6 +43,7 @@ add_executable(
   ${CMAKE_CURRENT_SOURCE_DIR}/mutex.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/promise.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ptr_tag.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/queue.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ref.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/scope_guard.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/signal.cpp

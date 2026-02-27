@@ -250,8 +250,8 @@ TEST(ASYNCPP, FiberFull) {
 	scope.invoke([]() -> asyncpp::task<> {
 		fiber f([]() {
 			// This is a stackful coroutine, yet I can still await C++20 coroutine awaiters:
-			fib_await asyncpp::timer::get_default().wait(std::chrono::milliseconds(100));
-			// This is exeuted after 100 milliseconds
+			fib_await asyncpp::timer::get_default().wait(std::chrono::milliseconds(10));
+			// This is exeuted after 10 milliseconds
 			return 10;
 		});
 		// You can also await stackful coroutines inside a c++20 coroutine:
